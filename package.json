@@ -1,0 +1,16 @@
+{
+  "name": "aidevopstool",
+  "private": true,
+  "workspaces": [
+    "api",
+    "ui"
+  ],
+  "scripts": {
+    "build": "npm run build:api && npm run build:ui",
+    "build:api": "npm --prefix api run build",
+    "build:ui": "npm --prefix ui run build",
+    "start": "node scripts/start-all.js",
+    "start:api": "npm --prefix api run start",
+    "start:ui": "npm --prefix ui run start"
+  }
+}
