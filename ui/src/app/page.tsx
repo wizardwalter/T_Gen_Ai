@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 type Tier = {
   title: string;
@@ -14,7 +15,7 @@ const tiers: Tier[] = [
   {
     title: "Presentation",
     accent: "from-sky-400/60 to-cyan-500/70",
-    items: ["Next.js UI", "Edge CDN", "Identity (SAML/Google)"],
+    items: ["Next.js UI", "Edge CDN", "Identity (Google SSO)"],
   },
   {
     title: "Application",
@@ -62,6 +63,7 @@ const formatBytes = (bytes: number) => {
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { data: session } = useSession();
 
   return (
     <div className="min-h-screen text-slate-100">
@@ -86,18 +88,37 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/auth/sign-in"
-              className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 hover:border-slate-500"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/auth/sign-up"
-              className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
-            >
-              Sign up
-            </Link>
+            {session?.user ? (
+              <div className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-sm text-slate-100">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-xs text-slate-200">
+                  👤
+                </span>
+                <span className="max-w-[140px] truncate">
+                  {session.user.name || session.user.email}
+                </span>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="ml-2 rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-200 hover:border-slate-500"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/auth/sign-in"
+                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 hover:border-slate-500"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/auth/sign-up"
+                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -132,8 +153,8 @@ export default function Home() {
                 <Link className="block rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 hover:border-slate-600" href="#diagram">
                   Diagram preview
                 </Link>
-                <Link className="block rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 hover:border-slate-600" href="#saml">
-                  Identity & SAML
+                <Link className="block rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 hover:border-slate-600" href="#sso">
+                  Identity & SSO
                 </Link>
               </div>
 
@@ -143,7 +164,7 @@ export default function Home() {
                 </p>
                 <p className="mt-1">Next.js + TypeScript</p>
                 <p>DynamoDB for state + diagrams</p>
-                <p>SAML (Google) for enterprise sign-on</p>
+                <p>Google SSO for enterprise sign-on</p>
               </div>
             </>
           )}
@@ -170,7 +191,7 @@ export default function Home() {
                 Land a clean Terraform architecture map without leaving your flow.
               </h1>
               <p className="max-w-3xl text-base text-slate-300">
-                Point this UI at your Terraform modules, preview the parsed graph, and share visuals with product, security, and SRE. Identity is wired for SAML (Google) and data lands in DynamoDB for scalable, NoSQL-first storage.
+                Point this UI at your Terraform modules, preview the parsed graph, and share visuals with product, security, and SRE. Identity is wired for Google SSO and data lands in DynamoDB for scalable, NoSQL-first storage.
               </p>
             </div>
           </header>
@@ -377,13 +398,13 @@ export default function Home() {
           </section>
 
           <section
-            id="saml"
+            id="sso"
             className="grid gap-4 md:grid-cols-3"
           >
             {[
               {
                 title: "Identity",
-                body: "SAML with Google as the IdP. Use ACS + EntityID from the API, upload metadata, and enforce domain-bound sign-ins.",
+                body: "Google SSO as the IdP. Use OIDC/SAML-backed SSO via Google Workspace and enforce domain-bound sign-ins.",
               },
               {
                 title: "Data",

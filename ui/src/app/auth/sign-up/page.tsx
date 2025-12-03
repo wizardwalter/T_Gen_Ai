@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 
 export default function SignUp() {
   return (
@@ -14,13 +15,16 @@ export default function SignUp() {
             Create your workspace
           </h1>
           <p className="text-sm text-slate-400">
-            Start with SAML-ready auth so you can bring your Google identity on day one.
+            Start with Google SSO so you can bring your Google identity on day one.
           </p>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-          <button className="w-full rounded-xl bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-3 text-sm font-semibold text-slate-50 shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400">
-            Continue with Google (SAML SSO)
+          <button
+            className="w-full rounded-xl bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-3 text-sm font-semibold text-slate-50 shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+            onClick={() => signIn("google", { callbackUrl: "/" })}
+          >
+            Continue with Google (SSO)
           </button>
           <div className="my-4 text-center text-xs uppercase tracking-[0.3em] text-slate-500">
             Or
