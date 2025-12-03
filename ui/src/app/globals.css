@@ -39,3 +39,27 @@ a {
   background: rgba(168, 85, 247, 0.28);
   color: #f8fafc;
 }
+
+@keyframes floatY {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes flowLine {
+  0% { transform: translateX(-80%); }
+  100% { transform: translateX(120%); }
+}
+
+@keyframes codeFlicker {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0.65; }
+}
+
+.animate-flow-line {
+  animation: flowLine 2.6s ease-in-out infinite;
+}
+
+.animate-code-flicker {
+  animation: codeFlicker 3.8s ease-in-out infinite;
+}
