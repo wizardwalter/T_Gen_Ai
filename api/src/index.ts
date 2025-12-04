@@ -1,21 +1,20 @@
+// Load env ASAP so downstream imports see it
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require("dotenv").config({ path: ".env" });
+} catch (err) {
+  // ignore if dotenv not present
+}
+
 import cors from "cors";
 import express from "express";
 import multer from "multer";
-
-type DiagramNode = {
-  id: string;
-  label: string;
-  tier: "presentation" | "application" | "data";
-};
-
-type DiagramEdge = {
-  from: string;
-  to: string;
-};
+import { parseTerraformToGraph } from "./parser";
+import { parsePlanJsonToGraph } from "./planParser";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 50 },
 });
 
 const app = express();
@@ -26,44 +25,82 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.post("/api/terraform/upload", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "Terraform file is required" });
+app.post("/api/terraform/upload", upload.array("files", 50), (req, res) => {
+  const files = (req.files as Express.Multer.File[]) ?? [];
+
+  if (!files.length) {
+    return res.status(400).json({ error: "Terraform files are required" });
   }
 
-  // Placeholder diagram data until the Terraform parser is wired in.
-  const nodes: DiagramNode[] = [
-    { id: "ui", label: "Next.js UI", tier: "presentation" },
-    { id: "cdn", label: "Edge CDN", tier: "presentation" },
-    { id: "api", label: "API Gateway", tier: "application" },
-    { id: "parser", label: "Terraform Parser", tier: "application" },
-    { id: "state", label: "State Storage", tier: "data" },
-    { id: "graph", label: "Diagram Cache", tier: "data" },
-  ];
+  const tfFiles = files
+    .filter((f) => f.originalname.endsWith(".tf") || f.originalname.endsWith(".tfvars"))
+    .map((f) => ({
+      name: f.originalname,
+      content: f.buffer.toString("utf8"),
+    }));
 
-  const edges: DiagramEdge[] = [
-    { from: "ui", to: "cdn" },
-    { from: "cdn", to: "api" },
-    { from: "api", to: "parser" },
-    { from: "parser", to: "state" },
-    { from: "parser", to: "graph" },
-  ];
+  if (!tfFiles.length) {
+    return res.status(400).json({ error: "No .tf or .tfvars files found in upload" });
+  }
 
-  return res.json({
-    file: {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype,
-    },
-    summary:
-      "Terraform file accepted. Parsing and diagram generation are stubbed until the parser pipeline is connected.",
-    diagram: { nodes, edges },
-    nextSteps: [
-      "Plug in the Terraform HCL parser and module resolver.",
-      "Map modules/resources into typed graph nodes.",
-      "Return graph data consumable by the UI canvas.",
-    ],
-  });
+  try {
+    const { graph, summary } = parseTerraformToGraph(tfFiles);
+    // Debug log for visibility
+    // eslint-disable-next-line no-console
+    console.log(
+      `[upload] files=${tfFiles.length} resources=${graph.nodes.length} edges=${graph.edges.length} summary="${summary}"`
+    );
+    return res.json({
+      files: files.map((f) => ({
+        name: f.originalname,
+        size: f.size,
+        mimetype: f.mimetype,
+      })),
+      summary,
+      graph,
+      nextSteps: [
+        "Enhance mapping for more AWS services and relationships.",
+        "Persist graph data (e.g., DynamoDB) and return an ID for retrieval.",
+        "Add layout hints for the UI canvas.",
+      ],
+    });
+  } catch (err) {
+    // Catch-all to avoid crashing the server if the parser throws unexpectedly.
+    return res.status(500).json({
+      error: "Parser failed unexpectedly",
+      details: (err as Error).message,
+    });
+  }
+});
+
+app.post("/api/terraform/plan", upload.single("plan"), (req, res) => {
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ error: "Terraform plan JSON file is required" });
+  }
+
+  try {
+    const json = JSON.parse(file.buffer.toString("utf8"));
+    const { graph, summary } = parsePlanJsonToGraph(json);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[plan] resources=${graph.nodes.length} edges=${graph.edges.length} summary="${summary}"`
+    );
+    return res.json({
+      file: { name: file.originalname, size: file.size, mimetype: file.mimetype },
+      summary,
+      graph,
+      nextSteps: [
+        "Persist graph data (e.g., DynamoDB) and return an ID for retrieval.",
+        "Add layout hints for the UI canvas.",
+      ],
+    });
+  } catch (err) {
+    return res.status(400).json({
+      error: "Failed to parse plan JSON",
+      details: (err as Error).message,
+    });
+  }
 });
 
 const port = process.env.PORT ?? 4000;

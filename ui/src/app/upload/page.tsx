@@ -4,9 +4,48 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
+
+type UploadResult = {
+  files: { name: string; size: number; mimetype: string }[];
+  summary: string;
+  graph: { nodes: any[]; edges: any[] };
+};
+
 export default function UploadPage() {
   const { data: session } = useSession();
   const [folderName, setFolderName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<UploadResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleUpload = async (files: File[]) => {
+    setError(null);
+    setResult(null);
+    if (!files.length) {
+      setError("No files selected.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      files.forEach((file) => form.append("files", file));
+      const resp = await fetch(`${API_BASE}/api/terraform/upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg || `Upload failed with status ${resp.status}`);
+      }
+      const json = (await resp.json()) as UploadResult;
+      setResult(json);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -64,12 +103,15 @@ export default function UploadPage() {
                     className="hidden"
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []);
-                      const first = files[0];
+                      const first = files[0] as any;
                       if (first && first.webkitRelativePath) {
                         const name = first.webkitRelativePath.split("/")[0];
                         setFolderName(name);
                       } else {
                         setFolderName(files[0]?.name ?? null);
+                      }
+                      if (files.length) {
+                        void handleUpload(files);
                       }
                     }}
                   />
@@ -94,6 +136,30 @@ export default function UploadPage() {
                   <p className="mt-1">Backend API for diagram synthesis.</p>
                 </div>
               </div>
+              {uploading && (
+                <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-200">
+                  Uploading and parsing… (this may take a few seconds)
+                </div>
+              )}
+              {error && (
+                <div className="mt-4 rounded-xl border border-rose-500/50 bg-rose-500/10 p-4 text-sm text-rose-100">
+                  {error}
+                </div>
+              )}
+              {result && (
+                <div className="mt-4 space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-200">
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    Parse summary
+                  </p>
+                  <p>{result.summary}</p>
+                  <p>
+                    Nodes: {result.graph.nodes.length} · Edges: {result.graph.edges.length}
+                  </p>
+                  <div className="text-xs text-slate-400">
+                    Files: {result.files.map((f) => f.name).join(", ")}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col items-center gap-4 text-center">
