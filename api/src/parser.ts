@@ -8,33 +8,74 @@ type ResourceDef = {
 };
 
 const serviceMap: Record<string, string> = {
+  // Compute / containers / serverless
   aws_instance: "ec2",
   aws_launch_template: "ec2",
-  aws_security_group: "vpc",
-  aws_security_group_rule: "vpc",
-  aws_lb: "elb",
-  aws_lb_target_group: "elb",
-  aws_alb: "elb",
-  aws_alb_target_group: "elb",
+  aws_autoscaling_group: "ec2",
+  aws_ecs_cluster: "ecs",
+  aws_ecs_service: "ecs",
+  aws_ecs_task_definition: "ecs",
+  aws_ecr_repository: "ecr",
+  aws_eks_cluster: "eks",
+  aws_eks_node_group: "eks",
+  aws_lambda_function: "lambda",
+
+  // Networking / edge
   aws_vpc: "vpc",
   aws_subnet: "vpc",
+  aws_route_table: "vpc",
+  aws_route_table_association: "vpc",
   aws_internet_gateway: "vpc",
   aws_nat_gateway: "vpc",
-  aws_route_table: "vpc",
-  aws_rds_cluster: "rds",
-  aws_db_instance: "rds",
-  aws_dynamodb_table: "dynamodb",
+  aws_security_group: "vpc",
+  aws_security_group_rule: "vpc",
+  aws_vpc_endpoint: "vpc",
+  aws_network_acl: "vpc",
+  aws_lb: "elb",
+  aws_alb: "elb",
+  aws_lb_target_group: "elb",
+  aws_alb_target_group: "elb",
+  aws_lb_listener: "elb",
+  aws_lb_listener_rule: "elb",
+  aws_route53_zone: "route53",
+  aws_route53_record: "route53",
+  aws_cloudfront_distribution: "cloudfront",
+  aws_apigatewayv2_api: "apigw",
+  aws_apigatewayv2_stage: "apigw",
+  aws_apigatewayv2_integration: "apigw",
+  aws_api_gateway_rest_api: "apigw",
+  aws_api_gateway_stage: "apigw",
+  aws_api_gateway_integration: "apigw",
+
+  // Data / storage
   aws_s3_bucket: "s3",
+  aws_efs_file_system: "efs",
+  aws_efs_mount_target: "efs",
+  aws_db_instance: "rds",
+  aws_rds_cluster: "rds",
+  aws_rds_cluster_instance: "rds",
+  aws_dynamodb_table: "dynamodb",
+  aws_elasticache_cluster: "elasticache",
+  aws_elasticache_replication_group: "elasticache",
+
+  // Messaging / events
+  aws_sqs_queue: "sqs",
+  aws_sns_topic: "sns",
+  aws_cloudwatch_event_bus: "eventbridge",
+  aws_cloudwatch_event_rule: "eventbridge",
+  aws_cloudwatch_event_target: "eventbridge",
+
+  // Identity / security / secrets
   aws_iam_role: "iam",
   aws_iam_policy: "iam",
   aws_iam_instance_profile: "iam",
-  aws_eks_cluster: "eks",
-  aws_eks_node_group: "eks",
-  aws_efs_file_system: "efs",
-  aws_elasticache_cluster: "elasticache",
-  aws_elasticache_replication_group: "elasticache",
-  aws_sqs_queue: "sqs",
-  aws_sns_topic: "sns",
+  aws_kms_key: "kms",
+  aws_secretsmanager_secret: "secrets",
+  aws_ssm_parameter: "ssm",
+
+  // Observability
+  aws_cloudwatch_log_group: "observability",
+  aws_cloudwatch_metric_alarm: "observability",
 };
 
 const hcl2json = (() => {
