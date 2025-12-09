@@ -4,3 +4,8 @@ dist
 npm-debug.log
 package-lock.json
 package-lock.json
+.terraform/
+terraform/.terraform.lock.hcl
+terraform/.terraform/
+terraform/.terraform/providers/
+terraform/.terraform/terraform.tfstate

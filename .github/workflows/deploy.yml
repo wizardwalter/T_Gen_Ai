@@ -1,0 +1,84 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build UI
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+          npm run export || true
+
+      - name: Sync UI to S3
+        run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
+            --paths "/*"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: >
+          terraform init
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="key=${{ secrets.TF_STATE_KEY }}"
+          -backend-config="region=${{ secrets.AWS_REGION }}"
+          -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
+
+      - name: Compute API repo
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "API_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api" >> $GITHUB_ENV
+          echo "TF_VAR_api_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api:latest" >> $GITHUB_ENV
+
+      - name: Terraform apply (create ECR first)
+        working-directory: terraform
+        run: terraform apply -auto-approve -target=aws_ecr_repository.api
+
+      - name: Login to ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $API_REPO
+
+      - name: Build and push API image
+        run: |
+          docker build -t $API_REPO:latest api
+          docker push $API_REPO:latest
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve

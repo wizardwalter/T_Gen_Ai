@@ -13,7 +13,7 @@ variable "project_name" {
 variable "api_image" {
   description = "Container image URI (ECR) for the API Lambda (package_type=Image)"
   type        = string
-  default     = ""
+  default     = "979067963238.dkr.ecr.us-east-1.amazonaws.com/aidevops-api:latest"
 }
 
 variable "cloudfront_price_class" {

@@ -18,6 +18,28 @@ resource "aws_iam_role_policy_attachment" "api_lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+data "aws_iam_policy_document" "api_lambda_ecr" {
+  statement {
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "api_lambda_ecr" {
+  name   = "${var.project_name}-api-ecr-read"
+  policy = data.aws_iam_policy_document.api_lambda_ecr.json
+}
+
+resource "aws_iam_role_policy_attachment" "api_lambda_ecr" {
+  role       = aws_iam_role.api_lambda.name
+  policy_arn = aws_iam_policy.api_lambda_ecr.arn
+}
+
 resource "aws_lambda_function" "api" {
   function_name = "${var.project_name}-api"
   role          = aws_iam_role.api_lambda.arn
