@@ -361,14 +361,68 @@ function buildEdges(resources: ResourceDef[]): GraphEdge[] {
     }
 
     // Route table association
-    if (res.type === "aws_route_table_association") {
-      if (res.body.route_table_id) {
-        const rtId = maybeResourceId("aws_route_table", res.body.route_table_id, byId);
-        if (rtId && res.body.subnet_id) {
-          const subId = maybeResourceId("aws_subnet", res.body.subnet_id, byId);
-          if (subId) edges.push({ from: rtId, to: subId, relation: "associates" });
-        }
+  if (res.type === "aws_route_table_association") {
+    if (res.body.route_table_id) {
+      const rtId = maybeResourceId("aws_route_table", res.body.route_table_id, byId);
+      if (rtId && res.body.subnet_id) {
+        const subId = maybeResourceId("aws_subnet", res.body.subnet_id, byId);
+        if (subId) edges.push({ from: rtId, to: subId, relation: "associates" });
       }
+    }
+  }
+
+    // API Gateway v2 integration -> Lambda or ALB/NLB
+    if (res.type === "aws_apigatewayv2_integration" && res.body.integration_uri) {
+      const lambdaId = resolveByArn("aws_lambda_function", res.body.integration_uri, byId);
+      if (lambdaId) edges.push({ from: fromId, to: lambdaId, relation: "invokes" });
+      const lbId = resolveByArn("aws_lb", res.body.integration_uri, byId);
+      if (lbId) edges.push({ from: fromId, to: lbId, relation: "forwards_to" });
+    }
+
+    // Lambda -> VPC subnets/SG/KMS
+    if (res.type === "aws_lambda_function") {
+      for (const sid of normalizeArray(res.body.subnet_ids)) {
+        const targetId = maybeResourceId("aws_subnet", sid, byId);
+        if (targetId) edges.push({ from: fromId, to: targetId, relation: "in_subnet" });
+      }
+      for (const sg of normalizeArray(res.body.vpc_config?.security_group_ids || res.body.security_groups)) {
+        const targetId = maybeResourceId("aws_security_group", sg, byId);
+        if (targetId) edges.push({ from: fromId, to: targetId, relation: "uses_sg" });
+      }
+      if (res.body.kms_key_arn) {
+        const targetId = resolveByArn("aws_kms_key", res.body.kms_key_arn, byId);
+        if (targetId) edges.push({ from: fromId, to: targetId, relation: "encrypted_by" });
+      }
+    }
+
+    // CloudFront -> origin (S3 or ALB) heuristic
+    if (res.type === "aws_cloudfront_distribution" && res.body.origin) {
+      const origins = normalizeArray(res.body.origin);
+      for (const origin of origins) {
+        const s3 = resolveByArn("aws_s3_bucket", origin, byId);
+        if (s3) edges.push({ from: fromId, to: s3, relation: "serves_from" });
+        const lb = resolveByArn("aws_lb", origin, byId);
+        if (lb) edges.push({ from: fromId, to: lb, relation: "forwards_to" });
+      }
+    }
+
+    // Route53 record -> CloudFront / ALB / API GW heuristic via target string
+    if (res.type === "aws_route53_record") {
+      const targets = normalizeArray(res.body.records || res.body.alias?.name);
+      for (const t of targets) {
+        const cf = resolveByArn("aws_cloudfront_distribution", t, byId);
+        if (cf) edges.push({ from: fromId, to: cf, relation: "routes_to" });
+        const lb = resolveByArn("aws_lb", t, byId);
+        if (lb) edges.push({ from: fromId, to: lb, relation: "routes_to" });
+        const api = resolveByArn("aws_apigatewayv2_api", t, byId);
+        if (api) edges.push({ from: fromId, to: api, relation: "routes_to" });
+      }
+    }
+
+    // EKS: cluster -> node group
+    if (res.type === "aws_eks_node_group" && res.body.cluster_name) {
+      const clusterId = maybeResourceId("aws_eks_cluster", res.body.cluster_name, byId);
+      if (clusterId) edges.push({ from: fromId, to: clusterId, relation: "member_of" });
     }
   }
 

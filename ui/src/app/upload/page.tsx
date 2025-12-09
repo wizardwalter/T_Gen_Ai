@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
-import ReactFlow, { Background, Controls, MarkerType } from "reactflow";
+import ReactFlow, { Background, Controls, MarkerType, type Node, type NodeMouseHandler } from "reactflow";
 import "reactflow/dist/style.css";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
@@ -91,7 +91,16 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
   );
 };
 
-const nodeTypes = { aws: AwsNode };
+const GroupNode = ({ data }: { data: { label: string } }) => (
+  <div className="h-full w-full rounded-2xl border border-sky-500/30 bg-sky-500/5 p-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+    <div className="flex items-center gap-2">
+      <img src={serviceIcons.vpc} alt="VPC" className="h-4 w-4" />
+      <span>{data.label}</span>
+    </div>
+  </div>
+);
+
+const nodeTypes = { aws: AwsNode, group: GroupNode };
 
 export default function UploadPage() {
   const { data: session } = useSession();
@@ -99,6 +108,8 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showInfra, setShowInfra] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -121,6 +132,7 @@ export default function UploadPage() {
       }
       const json = (await resp.json()) as UploadResult;
       setResult(json);
+      setSelectedNodeId(null);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -128,10 +140,14 @@ export default function UploadPage() {
     }
   };
 
-  const flow = useMemo(() => {
-    if (!result) return { nodes: [], edges: [] };
+  const handleNodeClick: NodeMouseHandler = (_event, node: Node) => {
+    setSelectedNodeId(node.id);
+  };
 
-    const lanes: Record<string, number> = {
+  const flow = useMemo(() => {
+    if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [] };
+
+    const serviceLane: Record<string, number> = {
       route53: 0,
       cloudfront: 0,
       apigw: 1,
@@ -154,24 +170,111 @@ export default function UploadPage() {
       secrets: 5,
       ssm: 5,
       observability: 6,
+      generic: 2,
     };
 
-    const laneCounts: Record<number, number> = {};
+    const hiddenTypes = new Set<string>([
+      "aws_ecs_task_definition",
+      "aws_lb_target_group_attachment",
+      "aws_launch_template",
+      "aws_iam_policy",
+    ]);
+    const infraDetailServices = new Set<string>(["route53", "cloudfront", "observability"]);
 
-    const nodes = result.graph.nodes.map((n, idx) => {
-      const service = n.service ?? "generic";
-      const lane = lanes[service] ?? 6;
+    const rawNodes = result.graph.nodes.filter((n) => {
+      if (hiddenTypes.has(n.type)) return false;
+      if (!showInfra && infraDetailServices.has(n.service)) return false;
+      return true;
+    });
+
+    const edgeKey = (e: any) => `${e.from}|${e.to}|${e.relation ?? ""}`;
+    const seenEdges = new Set<string>();
+    const rawEdges = result.graph.edges.filter((e) => {
+      const k = edgeKey(e);
+      if (seenEdges.has(k)) return false;
+      seenEdges.add(k);
+      return true;
+    });
+
+    const nodeById = new Map(rawNodes.map((n) => [n.id, n]));
+    const vpcMembership = new Map<string, string[]>();
+    for (const e of rawEdges) {
+      const target = nodeById.get(e.to);
+      if (e.relation === "in_vpc" && target?.service === "vpc") {
+        const list = vpcMembership.get(e.to) ?? [];
+        list.push(e.from);
+        vpcMembership.set(e.to, list);
+      }
+    }
+
+    const indegree = new Map<string, number>();
+    for (const n of rawNodes) indegree.set(n.id, 0);
+    for (const e of rawEdges) {
+      if (indegree.has(e.to)) indegree.set(e.to, (indegree.get(e.to) ?? 0) + 1);
+    }
+
+    const queue = rawNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0);
+    const levels = new Map<string, number>();
+    queue.forEach((n) => levels.set(n.id, serviceLane[n.service] ?? 2));
+
+    while (queue.length) {
+      const current = queue.shift();
+      if (!current) break;
+      const level = levels.get(current.id) ?? (serviceLane[current.service] ?? 2);
+      for (const e of rawEdges.filter((edge) => edge.from === current.id)) {
+        const nextLevel = Math.max(level + 1, serviceLane[(rawNodes.find((n) => n.id === e.to)?.service) ?? "generic"] ?? 2);
+        if (!levels.has(e.to) || nextLevel > (levels.get(e.to) ?? 0)) {
+          levels.set(e.to, nextLevel);
+        }
+        indegree.set(e.to, (indegree.get(e.to) ?? 1) - 1);
+        if ((indegree.get(e.to) ?? 0) <= 0) {
+          const targetNode = rawNodes.find((n) => n.id === e.to);
+          if (targetNode) queue.push(targetNode);
+        }
+      }
+    }
+
+    const laneCounts: Record<number, number> = {};
+    const positionedNodes = rawNodes.map((n, idx) => {
+      const lane = levels.get(n.id) ?? serviceLane[n.service] ?? 2;
       const order = laneCounts[lane] ?? 0;
       laneCounts[lane] = order + 1;
       return {
         id: n.id ?? `node-${idx}`,
         type: "aws",
-        data: { label: n.label ?? n.id ?? `Node ${idx}`, service },
+        data: { label: n.label ?? n.id ?? `Node ${idx}`, service: n.service ?? "generic" },
         position: { x: lane * 230, y: order * 120 },
       };
     });
 
-    const edges = result.graph.edges.map((e: any, idx: number) => ({
+    const idToPosition = new Map(positionedNodes.map((n) => [n.id, n.position]));
+
+    const groupNodes: any[] = [];
+    for (const [vpcId, members] of vpcMembership.entries()) {
+      const memberPositions = members
+        .map((id) => idToPosition.get(id))
+        .filter(Boolean) as Array<{ x: number; y: number }>;
+      if (!memberPositions.length) continue;
+      const minX = Math.min(...memberPositions.map((p) => p.x));
+      const maxX = Math.max(...memberPositions.map((p) => p.x));
+      const minY = Math.min(...memberPositions.map((p) => p.y));
+      const maxY = Math.max(...memberPositions.map((p) => p.y));
+      const width = maxX - minX + 260;
+      const height = maxY - minY + 180;
+      const vpcNode = nodeById.get(vpcId);
+      groupNodes.push({
+        id: `${vpcId}-group`,
+        type: "group",
+        data: { label: vpcNode?.label ?? "VPC" },
+        position: { x: minX - 120, y: minY - 80 },
+        style: { width, height },
+        selectable: false,
+        draggable: false,
+        zIndex: 0,
+      });
+    }
+
+    const edges = rawEdges.map((e: any, idx: number) => ({
       id: e.id ?? `edge-${idx}-${e.from}-${e.to}`,
       source: e.from,
       target: e.to,
@@ -181,8 +284,8 @@ export default function UploadPage() {
       animated: true,
       markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b" },
     }));
-    return { nodes, edges };
-  }, [result]);
+    return { nodes: [...groupNodes, ...positionedNodes], edges, rawNodes, rawEdges };
+  }, [result, showInfra]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -297,6 +400,23 @@ export default function UploadPage() {
                       Files: {result.files.map((f) => f.name).join(", ")}
                     </div>
                   </div>
+                  <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                        Diagram view
+                      </p>
+                      <p className="text-slate-300">Toggle infra overlays like Route53/CloudFront/observability.</p>
+                    </div>
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={showInfra}
+                        onChange={(e) => setShowInfra(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-sky-400 focus:ring-sky-500"
+                      />
+                      <span>Show infra details</span>
+                    </label>
+                  </div>
                   <div className="h-[520px] rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
                     {flow.nodes.length ? (
                       <ReactFlow
@@ -306,6 +426,7 @@ export default function UploadPage() {
                         fitView
                         fitViewOptions={{ padding: 0.2 }}
                         defaultEdgeOptions={{ animated: true }}
+                        onNodeClick={handleNodeClick}
                       >
                         <Background gap={18} size={1} color="#1e293b" />
                         <Controls />
@@ -318,47 +439,40 @@ export default function UploadPage() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                      Legend (most-used AWS services)
+                      Resources in this diagram
                     </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3 md:grid-cols-4">
-                      {[
-                        { service: "route53", label: "Route 53" },
-                        { service: "cloudfront", label: "CloudFront" },
-                        { service: "apigw", label: "API Gateway" },
-                        { service: "elb", label: "ALB/NLB" },
-                        { service: "ecs", label: "ECS" },
-                        { service: "ec2", label: "EC2" },
-                        { service: "lambda", label: "Lambda" },
-                        { service: "rds", label: "RDS" },
-                        { service: "dynamodb", label: "DynamoDB" },
-                        { service: "elasticache", label: "ElastiCache" },
-                        { service: "s3", label: "S3" },
-                        { service: "efs", label: "EFS" },
-                        { service: "sqs", label: "SQS" },
-                        { service: "sns", label: "SNS" },
-                        { service: "eventbridge", label: "EventBridge" },
-                        { service: "iam", label: "IAM" },
-                        { service: "kms", label: "KMS" },
-                        { service: "secrets", label: "Secrets Manager" },
-                        { service: "observability", label: "CloudWatch" },
-                      ].map((item) => (
-                        <div
-                          key={item.service}
-                          className="flex items-center gap-2 rounded-lg border border-slate-800/80 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-100"
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                      {flow.rawNodes.map((n: any) => (
+                        <button
+                          key={n.id}
+                          onClick={() => setSelectedNodeId(n.id)}
+                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                            selectedNodeId === n.id
+                              ? "border-sky-500/70 bg-sky-500/10"
+                              : "border-slate-800 bg-slate-950/60 hover:border-slate-600"
+                          }`}
                         >
                           <span
-                            className="inline-flex h-5 w-5 items-center justify-center rounded"
-                            style={{ background: `${(serviceColors[item.service] ?? "#475569")}22` }}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/70"
+                            style={{ border: `1px solid ${(serviceColors[n.service] ?? "#475569")}55` }}
                           >
                             <img
-                              src={serviceIcons[item.service] ?? serviceIcons.generic}
-                              alt={item.label}
-                              className="h-4 w-4"
+                              src={serviceIcons[n.service] ?? serviceIcons.generic}
+                              alt={n.label}
+                              className="h-6 w-6"
                             />
                           </span>
-                          <span className="text-slate-300">{item.label}</span>
-                        </div>
+                          <span className="flex-1 text-slate-100">
+                            <span className="block truncate font-semibold">{n.label}</span>
+                            <span className="block text-xs uppercase tracking-[0.15em] text-slate-400">
+                              {n.service}
+                            </span>
+                          </span>
+                        </button>
                       ))}
+                      {flow.rawNodes.length === 0 && (
+                        <div className="text-sm text-slate-400">No resources to list yet.</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -389,6 +503,54 @@ export default function UploadPage() {
             </div>
           )}
         </div>
+        {selectedNodeId && result && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Selection</p>
+                <p className="text-base font-semibold text-slate-50">
+                  {flow.rawNodes.find((n: any) => n.id === selectedNodeId)?.label ?? selectedNodeId}
+                </p>
+              </div>
+              <button
+                className="text-xs text-slate-400 hover:text-slate-200"
+                onClick={() => setSelectedNodeId(null)}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Metadata</p>
+                <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-slate-950/70 p-3 text-xs text-slate-300">
+{JSON.stringify(
+  result.graph.nodes.find((n) => n.id === selectedNodeId)?.metadata ?? {},
+  null,
+  2
+)}
+                </pre>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Relations</p>
+                <div className="mt-1 space-y-1 text-xs text-slate-200">
+                  {flow.rawEdges
+                    .filter((e: any) => e.from === selectedNodeId || e.to === selectedNodeId)
+                    .slice(0, 10)
+                    .map((e: any, idx: number) => (
+                      <div key={`${e.id}-${idx}`} className="rounded-md bg-slate-950/70 px-3 py-2">
+                        <span className="text-sky-300">{e.from}</span>
+                        <span className="text-slate-500"> — {e.relation} → </span>
+                        <span className="text-emerald-300">{e.to}</span>
+                      </div>
+                    ))}
+                  {flow.rawEdges.filter((e: any) => e.from === selectedNodeId || e.to === selectedNodeId).length === 0 && (
+                    <div className="text-slate-500">No relations recorded.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
