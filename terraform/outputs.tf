@@ -1,9 +1,14 @@
-output "alb_dns_name" {
-  description = "Public DNS name of the ALB"
-  value       = aws_lb.app.dns_name
+output "ui_bucket_name" {
+  description = "S3 bucket for the UI static site"
+  value       = aws_s3_bucket.ui.bucket
 }
 
-output "service_url" {
-  description = "Service URL (Route53 if configured, else ALB DNS)"
-  value       = local.create_dns_record ? "${var.domain_name}" : aws_lb.app.dns_name
+output "cloudfront_domain" {
+  description = "CloudFront domain for the UI"
+  value       = aws_cloudfront_distribution.ui.domain_name
+}
+
+output "api_url" {
+  description = "Base URL for the API Gateway HTTP API"
+  value       = aws_apigatewayv2_api.http_api.api_endpoint
 }

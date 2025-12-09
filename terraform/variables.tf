@@ -10,55 +10,26 @@ variable "project_name" {
   default     = "aidevops"
 }
 
-variable "app_image" {
-  description = "Container image for the UI+API service (ECR URI or public)"
+variable "api_image" {
+  description = "Container image URI (ECR) for the API Lambda (package_type=Image)"
   type        = string
+  default     = ""
 }
 
-variable "desired_count" {
-  description = "Number of ECS tasks"
-  type        = number
-  default     = 1
+variable "cloudfront_price_class" {
+  description = "CloudFront price class"
+  type        = string
+  default     = "PriceClass_100"
 }
 
-variable "task_cpu" {
-  description = "Fargate task CPU units (smallest 256 = 0.25 vCPU)"
-  type        = number
-  default     = 256
-}
-
-variable "task_memory" {
-  description = "Fargate task memory in MiB (smallest 512)"
+variable "lambda_memory_mb" {
+  description = "Lambda memory for API"
   type        = number
   default     = 512
 }
 
-variable "container_port" {
-  description = "Container port exposed by the app"
+variable "lambda_timeout_seconds" {
+  description = "Lambda timeout for API"
   type        = number
-  default     = 3000
-}
-
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
-  type        = string
-  default     = "10.0.0.0/16"
-}
-
-variable "public_subnet_cidrs" {
-  description = "Public subnet CIDRs"
-  type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24"]
-}
-
-variable "zone_id" {
-  description = "Route53 hosted zone ID (optional). If provided with domain_name, creates A record to ALB."
-  type        = string
-  default     = ""
-}
-
-variable "domain_name" {
-  description = "DNS name to point at the ALB (optional)"
-  type        = string
-  default     = ""
+  default     = 30
 }
