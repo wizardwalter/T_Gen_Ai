@@ -25,6 +25,7 @@ jobs:
           aws-region: us-east-1
           role-session-name: gha-deploy
 
+      ## will revisit once aws account is verified
 #      - name: Setup Node
 #        uses: actions/setup-node@v4
 #        with:
