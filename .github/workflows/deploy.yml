@@ -3,7 +3,8 @@ name: Deploy
 on:
   push:
     branches: [main]
-
+  workflow_dispatch:
+    
 permissions:
   id-token: write
   contents: read
@@ -12,7 +13,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_REGION: us-east-1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,8 +21,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -38,13 +40,14 @@ jobs:
           npm run export || true
 
       - name: Sync UI to S3
+#        run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
         run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
 
-      - name: Invalidate CloudFront
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
-            --paths "/*"
+#      - name: Invalidate CloudFront
+#        run: |
+#          aws cloudfront create-invalidation \
+#            --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
+#            --paths "/*"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -58,7 +61,7 @@ jobs:
           terraform init
           -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
           -backend-config="key=${{ secrets.TF_STATE_KEY }}"
-          -backend-config="region=${{ secrets.AWS_REGION }}"
+          -backend-config="region=${{ env.AWS_REGION }}"
           -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
 
       - name: Compute API repo

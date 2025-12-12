@@ -25,24 +25,24 @@ resource "aws_s3_bucket_public_access_block" "ui" {
   restrict_public_buckets = true
 }
 
-resource "aws_cloudfront_origin_access_control" "ui" {
-  name                              = "${var.project_name}-ui-oac"
-  description                       = "OAC for ${var.project_name} UI bucket"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
+# resource "aws_cloudfront_origin_access_control" "ui" {
+#   name                              = "${var.project_name}-ui-oac"
+#   description                       = "OAC for ${var.project_name} UI bucket"
+#   origin_access_control_origin_type = "s3"
+#   signing_behavior                  = "always"
+#   signing_protocol                  = "sigv4"
+# }
 
 resource "aws_cloudfront_distribution" "ui" {
   enabled             = true
-  price_class         = var.cloudfront_price_class
+#  price_class         = var.cloudfront_price_class
   comment             = "${var.project_name} UI"
   default_root_object = "index.html"
 
   origin {
     domain_name              = aws_s3_bucket.ui.bucket_regional_domain_name
     origin_id                = "ui-bucket"
-    origin_access_control_id = aws_cloudfront_origin_access_control.ui.id
+#    origin_access_control_id = aws_cloudfront_origin_access_control.ui.id
   }
 
   default_cache_behavior {
