@@ -21,33 +21,33 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
+          role-session-name: gha-deploy
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-          cache-dependency-path: ui/package-lock.json
+#      - name: Setup Node
+#        uses: actions/setup-node@v4
+#        with:
+#          node-version: 20
+#          cache: "npm"
+#          cache-dependency-path: ui/package-lock.json
 
-      - name: Build UI
-        working-directory: ui
-        run: |
-          npm ci
-          npm run build
-          npm run export || true
+#      - name: Build UI
+#        working-directory: ui
+#        run: |
+#          npm ci
+#          npm run build
+#          npm run export || true
 
-      - name: Sync UI to S3
-#        run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
-        run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
+#      - name: Sync UI to S3
+#      #  run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
+#      #  run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
 
 #      - name: Invalidate CloudFront
-#        run: |
-#          aws cloudfront create-invalidation \
-#            --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
-#            --paths "/*"
+#      #  run: |
+#      #    aws cloudfront create-invalidation \
+#      #      --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
+#      #      --paths "/*"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

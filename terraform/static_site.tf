@@ -33,71 +33,71 @@ resource "aws_s3_bucket_public_access_block" "ui" {
 #   signing_protocol                  = "sigv4"
 # }
 
-resource "aws_cloudfront_distribution" "ui" {
-  enabled             = true
-#  price_class         = var.cloudfront_price_class
-  comment             = "${var.project_name} UI"
-  default_root_object = "index.html"
-
-  origin {
-    domain_name              = aws_s3_bucket.ui.bucket_regional_domain_name
-    origin_id                = "ui-bucket"
-#    origin_access_control_id = aws_cloudfront_origin_access_control.ui.id
-  }
-
-  default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "ui-bucket"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
-
-  tags = {
-    Name = "${var.project_name}-ui-cf"
-  }
-}
-
-# Allow CloudFront to read from the bucket
-data "aws_iam_policy_document" "ui_bucket" {
-  statement {
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.ui.arn}/*"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.ui.arn]
-    }
-  }
-}
-
-resource "aws_s3_bucket_policy" "ui" {
-  bucket = aws_s3_bucket.ui.id
-  policy = data.aws_iam_policy_document.ui_bucket.json
-}
+# resource "aws_cloudfront_distribution" "ui" {
+#   enabled             = true
+# #  price_class         = var.cloudfront_price_class
+#   comment             = "${var.project_name} UI"
+#   default_root_object = "index.html"
+#
+#   origin {
+#     domain_name              = aws_s3_bucket.ui.bucket_regional_domain_name
+#     origin_id                = "ui-bucket"
+# #    origin_access_control_id = aws_cloudfront_origin_access_control.ui.id
+#   }
+#
+#   default_cache_behavior {
+#     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+#     cached_methods   = ["GET", "HEAD"]
+#     target_origin_id = "ui-bucket"
+#
+#     forwarded_values {
+#       query_string = false
+#       cookies {
+#         forward = "none"
+#       }
+#     }
+#
+#     viewer_protocol_policy = "redirect-to-https"
+#     min_ttl                = 0
+#     default_ttl            = 3600
+#     max_ttl                = 86400
+#   }
+#
+#   restrictions {
+#     geo_restriction {
+#       restriction_type = "none"
+#     }
+#   }
+#
+#   viewer_certificate {
+#     cloudfront_default_certificate = true
+#   }
+#
+#   tags = {
+#     Name = "${var.project_name}-ui-cf"
+#   }
+# }
+#
+# # Allow CloudFront to read from the bucket
+# data "aws_iam_policy_document" "ui_bucket" {
+#   statement {
+#     actions   = ["s3:GetObject"]
+#     resources = ["${aws_s3_bucket.ui.arn}/*"]
+#
+#     principals {
+#       type        = "Service"
+#       identifiers = ["cloudfront.amazonaws.com"]
+#     }
+#
+#     condition {
+#       test     = "StringEquals"
+#       variable = "AWS:SourceArn"
+#       values   = [aws_cloudfront_distribution.ui.arn]
+#     }
+#   }
+# }
+#
+# resource "aws_s3_bucket_policy" "ui" {
+#   bucket = aws_s3_bucket.ui.id
+#   policy = data.aws_iam_policy_document.ui_bucket.json
+# }
