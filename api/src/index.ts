@@ -12,9 +12,11 @@ import multer from "multer";
 import { parseTerraformToGraph } from "./parser";
 import { parsePlanJsonToGraph } from "./planParser";
 
+// Allow the max upload size to be tuned via env (defaults to 25 MB).
+const maxUploadMb = Math.max(1, Number(process.env.UPLOAD_MAX_MB ?? "25"));
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024, files: 50 },
+  limits: { fileSize: maxUploadMb * 1024 * 1024, files: 50 },
 });
 
 const app = express();
@@ -101,6 +103,18 @@ app.post("/api/terraform/plan", upload.single("plan"), (req, res) => {
       details: (err as Error).message,
     });
   }
+});
+
+// Return a clear message for Multer-specific failures (e.g., file too large).
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(413).json({
+      error: err.code === "LIMIT_FILE_SIZE" ? "File too large" : "Upload failed",
+      details: err.message,
+      maxUploadMb,
+    });
+  }
+  return res.status(500).json({ error: "Unexpected server error" });
 });
 
 const port = process.env.PORT ?? 4000;
