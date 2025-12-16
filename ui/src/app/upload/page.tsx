@@ -65,7 +65,15 @@ const serviceIcons: Record<string, string> = {
   secrets: "/aws-icons/Security-Identity-Compliance/Secrets-Manager.svg",
   ssm: "/aws-icons/Management-Governance/Systems-Manager.svg",
   observability: "/aws-icons/Management-Governance/CloudWatch.svg",
-  generic: "/aws-icons/Compute/EC2.svg",
+  // Inline gear icon data URI as a neutral fallback for unmapped services.
+  generic:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>
+        <circle cx='12' cy='12' r='3.5' fill='%231e293b'/>
+        <path d='M12 2.5l1 2.2a1 1 0 0 0 .9.6l2.4.2a1 1 0 0 1 .8.6l1 2.1a1 1 0 0 0 .7.6l2.2.5a1 1 0 0 1 .7 1l-.2 2.2a1 1 0 0 0 .4.9l1.8 1.5-1.8 1.5a1 1 0 0 0-.4.9l.2 2.2a1 1 0 0 1-.7 1l-2.2.5a1 1 0 0 0-.7.6l-1 2.1a1 1 0 0 1-.8.6l-2.4.2a1 1 0 0 0-.9.6L12 21.5l-1-2.2a1 1 0 0 0-.9-.6l-2.4-.2a1 1 0 0 1-.8-.6l-1-2.1a1 1 0 0 0-.7-.6l-2.2-.5a1 1 0 0 1-.7-1l.2-2.2a1 1 0 0 0-.4-.9L.6 12l1.8-1.5a1 1 0 0 0 .4-.9l-.2-2.2a1 1 0 0 1 .7-1l2.2-.5a1 1 0 0 0 .7-.6l1-2.1a1 1 0 0 1 .8-.6l2.4-.2a1 1 0 0 0 .9-.6L12 2.5Z'/>
+      </svg>`
+    ),
 };
 
 type FlowNodeData = { label: string; service: string };
@@ -145,7 +153,7 @@ export default function UploadPage() {
   };
 
   const flow = useMemo(() => {
-    if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [] };
+    if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [], legendNodes: [] };
 
     const serviceLane: Record<string, number> = {
       route53: 0,
@@ -173,6 +181,28 @@ export default function UploadPage() {
       generic: 2,
     };
 
+    // Primary services stay on the canvas; everything else goes to the legend list.
+    const primaryServices = new Set<string>([
+      "route53",
+      "cloudfront",
+      "apigw",
+      "lambda",
+      "ecs",
+      "ec2",
+      "eks",
+      "ecr",
+      "s3",
+      "rds",
+      "dynamodb",
+      "elasticache",
+      "sqs",
+      "sns",
+      "eventbridge",
+      "iam",
+      "kms",
+      "secrets",
+    ]);
+
     const hiddenTypes = new Set<string>([
       "aws_ecs_task_definition",
       "aws_lb_target_group_attachment",
@@ -181,22 +211,29 @@ export default function UploadPage() {
     ]);
     const infraDetailServices = new Set<string>(["route53", "cloudfront", "observability"]);
 
-    const rawNodes = result.graph.nodes.filter((n) => {
+    const rawNodesAll = result.graph.nodes.filter((n) => {
       if (hiddenTypes.has(n.type)) return false;
       if (!showInfra && infraDetailServices.has(n.service)) return false;
       return true;
     });
+    const displayNodes = rawNodesAll.filter((n) => primaryServices.has(n.service));
+    const legendNodes = rawNodesAll.filter((n) => !primaryServices.has(n.service));
 
     const edgeKey = (e: any) => `${e.from}|${e.to}|${e.relation ?? ""}`;
     const seenEdges = new Set<string>();
-    const rawEdges = result.graph.edges.filter((e) => {
+    const rawEdgesAll = result.graph.edges.filter((e) => {
       const k = edgeKey(e);
       if (seenEdges.has(k)) return false;
       seenEdges.add(k);
       return true;
     });
+    const rawEdges = rawEdgesAll.filter((e) => {
+      const fromVisible = displayNodes.some((n) => n.id === e.from);
+      const toVisible = displayNodes.some((n) => n.id === e.to);
+      return fromVisible && toVisible;
+    });
 
-    const nodeById = new Map(rawNodes.map((n) => [n.id, n]));
+    const nodeById = new Map(displayNodes.map((n) => [n.id, n]));
     const vpcMembership = new Map<string, string[]>();
     for (const e of rawEdges) {
       const target = nodeById.get(e.to);
@@ -208,12 +245,12 @@ export default function UploadPage() {
     }
 
     const indegree = new Map<string, number>();
-    for (const n of rawNodes) indegree.set(n.id, 0);
+    for (const n of displayNodes) indegree.set(n.id, 0);
     for (const e of rawEdges) {
       if (indegree.has(e.to)) indegree.set(e.to, (indegree.get(e.to) ?? 0) + 1);
     }
 
-    const queue = rawNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0);
+    const queue = displayNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0);
     const levels = new Map<string, number>();
     queue.forEach((n) => levels.set(n.id, serviceLane[n.service] ?? 2));
 
@@ -222,20 +259,23 @@ export default function UploadPage() {
       if (!current) break;
       const level = levels.get(current.id) ?? (serviceLane[current.service] ?? 2);
       for (const e of rawEdges.filter((edge) => edge.from === current.id)) {
-        const nextLevel = Math.max(level + 1, serviceLane[(rawNodes.find((n) => n.id === e.to)?.service) ?? "generic"] ?? 2);
+        const nextLevel = Math.max(
+          level + 1,
+          serviceLane[(displayNodes.find((n) => n.id === e.to)?.service) ?? "generic"] ?? 2
+        );
         if (!levels.has(e.to) || nextLevel > (levels.get(e.to) ?? 0)) {
           levels.set(e.to, nextLevel);
         }
         indegree.set(e.to, (indegree.get(e.to) ?? 1) - 1);
         if ((indegree.get(e.to) ?? 0) <= 0) {
-          const targetNode = rawNodes.find((n) => n.id === e.to);
+          const targetNode = displayNodes.find((n) => n.id === e.to);
           if (targetNode) queue.push(targetNode);
         }
       }
     }
 
     const laneCounts: Record<number, number> = {};
-    const positionedNodes = rawNodes.map((n, idx) => {
+    const positionedNodes = displayNodes.map((n, idx) => {
       const lane = levels.get(n.id) ?? serviceLane[n.service] ?? 2;
       const order = laneCounts[lane] ?? 0;
       laneCounts[lane] = order + 1;
@@ -284,7 +324,7 @@ export default function UploadPage() {
       animated: true,
       markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b" },
     }));
-    return { nodes: [...groupNodes, ...positionedNodes], edges, rawNodes, rawEdges };
+    return { nodes: [...groupNodes, ...positionedNodes], edges, rawNodes: displayNodes, rawEdges, legendNodes };
   }, [result, showInfra]);
 
   return (
@@ -437,42 +477,81 @@ export default function UploadPage() {
                       </div>
                     )}
                   </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                      Resources in this diagram
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                      {flow.rawNodes.map((n: any) => (
-                        <button
-                          key={n.id}
-                          onClick={() => setSelectedNodeId(n.id)}
-                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${
-                            selectedNodeId === n.id
-                              ? "border-sky-500/70 bg-sky-500/10"
-                              : "border-slate-800 bg-slate-950/60 hover:border-slate-600"
-                          }`}
-                        >
-                          <span
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/70"
-                            style={{ border: `1px solid ${(serviceColors[n.service] ?? "#475569")}55` }}
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                        Shown in diagram (primary services)
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                        {flow.rawNodes.map((n: any) => (
+                          <button
+                            key={n.id}
+                            onClick={() => setSelectedNodeId(n.id)}
+                            className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                              selectedNodeId === n.id
+                                ? "border-sky-500/70 bg-sky-500/10"
+                                : "border-slate-800 bg-slate-950/60 hover:border-slate-600"
+                            }`}
                           >
-                            <img
-                              src={serviceIcons[n.service] ?? serviceIcons.generic}
-                              alt={n.label}
-                              className="h-6 w-6"
-                            />
-                          </span>
-                          <span className="flex-1 text-slate-100">
-                            <span className="block truncate font-semibold">{n.label}</span>
-                            <span className="block text-xs uppercase tracking-[0.15em] text-slate-400">
-                              {n.service}
+                            <span
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/70"
+                              style={{ border: `1px solid ${(serviceColors[n.service] ?? "#475569")}55` }}
+                            >
+                              <img
+                                src={serviceIcons[n.service] ?? serviceIcons.generic}
+                                alt={n.label}
+                                className="h-6 w-6"
+                              />
                             </span>
-                          </span>
-                        </button>
-                      ))}
-                      {flow.rawNodes.length === 0 && (
-                        <div className="text-sm text-slate-400">No resources to list yet.</div>
-                      )}
+                            <span className="flex min-w-0 flex-1 flex-col text-slate-100">
+                              <span className="block break-all whitespace-normal font-semibold leading-snug">
+                                {n.label}
+                              </span>
+                              <span className="block break-all whitespace-normal text-xs uppercase tracking-[0.15em] text-slate-400">
+                                {n.service}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                        {flow.rawNodes.length === 0 && (
+                          <div className="text-sm text-slate-400">No resources to list yet.</div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                        Legend (hidden detail resources)
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        {flow.legendNodes.map((n: any) => (
+                          <div
+                            key={n.id}
+                            className="flex min-w-[220px] max-w-full flex-1 basis-[220px] items-center gap-3 overflow-hidden rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-left text-sm"
+                          >
+                            <span
+                              className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-slate-800/70"
+                              style={{ border: `1px solid ${(serviceColors[n.service] ?? "#475569")}40` }}
+                            >
+                              <img
+                                src={serviceIcons[n.service] ?? serviceIcons.generic}
+                                alt={n.label}
+                                className="h-5 w-5 opacity-80"
+                              />
+                            </span>
+                            <span className="flex min-w-0 flex-1 flex-col text-slate-200">
+                              <span className="block break-all whitespace-normal font-semibold leading-snug">
+                                {n.label}
+                              </span>
+                              <span className="block break-all whitespace-normal text-[11px] uppercase tracking-[0.12em] text-slate-500">
+                                {n.service}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                        {flow.legendNodes.length === 0 && (
+                          <div className="text-sm text-slate-400">No hidden resources detected.</div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
