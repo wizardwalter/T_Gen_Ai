@@ -34,3 +34,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## TODO
+
+- Simplify `deploy.yml` (reduce steps, cut redundant caching, streamline UI build/export).
+- Make the ReactFlow diagrams more intentional/visual (clear arrows, ordering, overlays).
+- Set up Route53 and point a custom domain at CloudFront.
+- Run a DDoS/burst test to validate the CloudFront guardrail.
+- Update Google auth callback to use the deployed domain (no localhost).
