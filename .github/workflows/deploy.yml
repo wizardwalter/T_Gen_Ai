@@ -80,7 +80,7 @@ jobs:
           NEXT_PUBLIC_API_BASE: ${{ env.API_URL }}
         run: |
           set -x
-          npm ci
+          npm install
           npm run build
           npm run export || true
 
