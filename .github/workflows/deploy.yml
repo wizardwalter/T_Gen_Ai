@@ -75,13 +75,12 @@ jobs:
           node-version: 20
 
       - name: Build UI
-        working-directory: ui
         env:
           NEXT_PUBLIC_API_BASE: ${{ env.API_URL }}
         run: |
-          npm ci
-          npm run build
-          npm run export || true
+          npm ci --workspace ui
+          npm run build --workspace ui
+          npm run export --workspace ui || true
 
       - name: Sync UI to S3
         run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
