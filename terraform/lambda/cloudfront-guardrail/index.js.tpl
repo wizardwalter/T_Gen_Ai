@@ -1,11 +1,11 @@
 const AWS = require("aws-sdk");
 
 const cloudfront = new AWS.CloudFront();
+const distributionId = "__DISTRIBUTION_ID__";
 
 exports.handler = async () => {
-  const distributionId = process.env.DISTRIBUTION_ID;
   if (!distributionId) {
-    throw new Error("Missing DISTRIBUTION_ID");
+    throw new Error("Missing distribution ID");
   }
 
   const cfg = await cloudfront

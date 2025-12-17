@@ -25,31 +25,6 @@ jobs:
           aws-region: us-east-1
           role-session-name: gha-deploy
 
-      ## will revisit once aws account is verified
-#      - name: Setup Node
-#        uses: actions/setup-node@v4
-#        with:
-#          node-version: 20
-#          cache: "npm"
-#          cache-dependency-path: ui/package-lock.json
-
-#      - name: Build UI
-#        working-directory: ui
-#        run: |
-#          npm ci
-#          npm run build
-#          npm run export || true
-
-#      - name: Sync UI to S3
-#      #  run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
-#      #  run: aws s3 sync ui/out s3://${{ secrets.UI_BUCKET }} --delete
-
-#      - name: Invalidate CloudFront
-#      #  run: |
-#      #    aws cloudfront create-invalidation \
-#      #      --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
-#      #      --paths "/*"
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -86,3 +61,36 @@ jobs:
       - name: Terraform Apply
         working-directory: terraform
         run: terraform apply -auto-approve
+
+      - name: Fetch outputs for UI deploy
+        working-directory: terraform
+        run: |
+          echo "UI_BUCKET=$(terraform output -raw ui_bucket_name)" >> $GITHUB_ENV
+          echo "CF_DIST_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_ENV
+          echo "API_URL=$(terraform output -raw api_url)" >> $GITHUB_ENV
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build UI
+        working-directory: ui
+        env:
+          NEXT_PUBLIC_API_BASE: ${{ env.API_URL }}
+        run: |
+          npm ci
+          npm run build
+          npm run export || true
+
+      - name: Sync UI to S3
+        run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
+
+      - name: Invalidate CloudFront
+        if: env.CF_DIST_ID != ''
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id $CF_DIST_ID \
+            --paths "/*"

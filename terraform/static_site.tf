@@ -161,7 +161,10 @@ resource "aws_iam_role_policy_attachment" "cloudfront_guardrail" {
 data "archive_file" "cloudfront_guardrail" {
   type        = "zip"
   output_path = "${path.module}/cloudfront-guardrail.zip"
-  source_file = "${path.module}/lambda/cloudfront-guardrail/index.js"
+  source {
+    content  = replace(file("${path.module}/lambda/cloudfront-guardrail/index.js.tpl"), "__DISTRIBUTION_ID__", aws_cloudfront_distribution.ui.id)
+    filename = "index.js"
+  }
 }
 
 resource "aws_lambda_function" "cloudfront_guardrail" {

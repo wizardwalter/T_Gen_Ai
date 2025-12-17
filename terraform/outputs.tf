@@ -1,12 +1,12 @@
-# output "cloudfront_domain" {
-#   description = "CloudFront domain for the UI"
-#   value       = aws_cloudfront_distribution.ui.domain_name
-# }
-#
-# output "cloudfront_distribution_id" {
-#   description = "CloudFront distribution ID for invalidations"
-#   value       = aws_cloudfront_distribution.ui.id
-# }
+output "cloudfront_domain" {
+  description = "CloudFront domain for the UI"
+  value       = aws_cloudfront_distribution.ui.domain_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for invalidations"
+  value       = aws_cloudfront_distribution.ui.id
+}
 
 output "ui_bucket_name" {
   description = "S3 bucket for the UI static site"
