@@ -88,6 +88,7 @@ const hcl2json = (() => {
 })();
 
 // Read the flag at runtime to honor env loaded before use.
+// Opt-in to hcl2json for richer parsing by setting USE_HCL2JSON=true.
 const useHcl2 = () => process.env.USE_HCL2JSON === "true";
 
 type TfInputFile = { name: string; content: string };
@@ -99,17 +100,28 @@ export function parseTerraformToGraph(files: TfInputFile[]): { graph: Graph; sum
     const enableHcl = useHcl2() && hcl2json;
 
     for (const file of files) {
-      try {
-        if (enableHcl) {
+      let resources: ResourceDef[] = [];
+
+      if (enableHcl) {
+        try {
           const parsed: HclJson = hcl2json.parse(file.content);
-          const resources = collectResources(parsed);
-          allResources.push(...resources);
-        } else {
-          const resources = collectResourcesFromRegex(file.content);
-          allResources.push(...resources);
+          resources = collectResources(parsed);
+        } catch (err) {
+          errors.push(`${file.name}: ${(err as Error).message}`);
         }
-      } catch (err) {
-        errors.push(`${file.name}: ${(err as Error).message}`);
+      }
+
+      // Fallback to regex parsing if hcl2json is disabled or failed for this file.
+      if (!resources.length) {
+        try {
+          resources = collectResourcesFromRegex(file.content);
+        } catch (err) {
+          errors.push(`${file.name}: ${(err as Error).message}`);
+        }
+      }
+
+      if (resources.length) {
+        allResources.push(...resources);
       }
     }
 
@@ -219,6 +231,9 @@ function extractMetadata(block: string): Record<string, unknown> {
   pickString("route_table_id");
   pickString("igw_id");
   pickString("gateway_id");
+  pickString("api_id");
+  pickString("integration_uri");
+  pickString("target");
 
   return meta;
 }
@@ -378,6 +393,31 @@ function buildEdges(resources: ResourceDef[]): GraphEdge[] {
       const lbId = resolveByArn("aws_lb", res.body.integration_uri, byId);
       if (lbId) edges.push({ from: fromId, to: lbId, relation: "forwards_to" });
     }
+    if (res.type === "aws_apigatewayv2_integration" && res.body.api_id) {
+      const apiId = maybeResourceId("aws_apigatewayv2_api", res.body.api_id, byId);
+      if (apiId) edges.push({ from: apiId, to: fromId, relation: "has_integration" });
+    }
+
+    // API Gateway v2 routes/stages -> API/integration
+    if (res.type === "aws_apigatewayv2_route") {
+      if (res.body.api_id) {
+        const apiId = maybeResourceId("aws_apigatewayv2_api", res.body.api_id, byId);
+        if (apiId) edges.push({ from: apiId, to: fromId, relation: "has_route" });
+      }
+      if (res.body.target) {
+        const match = /integrations\/([\w\-.]+)/.exec(res.body.target as string);
+        const integrationIdRaw = match?.[1];
+        if (integrationIdRaw) {
+          const integrationId = maybeResourceId("aws_apigatewayv2_integration", integrationIdRaw, byId);
+          if (integrationId) edges.push({ from: fromId, to: integrationId, relation: "routes_to" });
+        }
+      }
+    }
+
+    if (res.type === "aws_apigatewayv2_stage" && res.body.api_id) {
+      const apiId = maybeResourceId("aws_apigatewayv2_api", res.body.api_id, byId);
+      if (apiId) edges.push({ from: apiId, to: fromId, relation: "has_stage" });
+    }
 
     // Lambda -> VPC subnets/SG/KMS
     if (res.type === "aws_lambda_function") {
@@ -393,16 +433,35 @@ function buildEdges(resources: ResourceDef[]): GraphEdge[] {
         const targetId = resolveByArn("aws_kms_key", res.body.kms_key_arn, byId);
         if (targetId) edges.push({ from: fromId, to: targetId, relation: "encrypted_by" });
       }
+      if (res.body.role) {
+        const roleId = resolveByArn("aws_iam_role", res.body.role, byId) ?? maybeResourceId("aws_iam_role", res.body.role, byId);
+        if (roleId) edges.push({ from: fromId, to: roleId, relation: "assumes_role" });
+      }
     }
 
     // CloudFront -> origin (S3 or ALB) heuristic
     if (res.type === "aws_cloudfront_distribution" && res.body.origin) {
       const origins = normalizeArray(res.body.origin);
       for (const origin of origins) {
-        const s3 = resolveByArn("aws_s3_bucket", origin, byId);
+        const originObj = origin as any;
+        const domain =
+          originObj && typeof originObj === "object"
+            ? (originObj.domain_name as string | undefined)
+            : undefined;
+        const s3 = resolveByArn("aws_s3_bucket", origin as string, byId);
         if (s3) edges.push({ from: fromId, to: s3, relation: "serves_from" });
-        const lb = resolveByArn("aws_lb", origin, byId);
+        const lb = resolveByArn("aws_lb", origin as string, byId);
         if (lb) edges.push({ from: fromId, to: lb, relation: "forwards_to" });
+
+        if (domain) {
+          for (const res of resources) {
+            if (res.type !== "aws_s3_bucket") continue;
+            const bucketName = res.body.bucket as string | undefined;
+            if (bucketName && domain.includes(bucketName)) {
+              edges.push({ from: fromId, to: `aws_s3_bucket.${res.name}`, relation: "serves_from" });
+            }
+          }
+        }
       }
     }
 

@@ -155,17 +155,18 @@ export default function UploadPage() {
   const flow = useMemo(() => {
     if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [], legendNodes: [] };
 
+    // Lane ordering roughly matches the desired downstream story: CloudFront -> S3 -> API Gateway -> Lambda.
     const serviceLane: Record<string, number> = {
       route53: 0,
       cloudfront: 0,
-      apigw: 1,
-      elb: 1,
-      lambda: 2,
+      s3: 1,
+      apigw: 2,
+      elb: 2,
       ecs: 2,
       ec2: 2,
       eks: 2,
-      ecr: 2,
-      s3: 3,
+      lambda: 3,
+      ecr: 3,
       rds: 3,
       dynamodb: 3,
       elasticache: 3,
@@ -209,7 +210,7 @@ export default function UploadPage() {
       "aws_launch_template",
       "aws_iam_policy",
     ]);
-    const infraDetailServices = new Set<string>(["route53", "cloudfront", "observability"]);
+    const infraDetailServices = new Set<string>(["route53", "observability"]);
 
     const rawNodesAll = result.graph.nodes.filter((n) => {
       if (hiddenTypes.has(n.type)) return false;
@@ -244,10 +245,13 @@ export default function UploadPage() {
       }
     }
 
+    const layoutEdges = rawEdges;
     const indegree = new Map<string, number>();
     for (const n of displayNodes) indegree.set(n.id, 0);
-    for (const e of rawEdges) {
-      if (indegree.has(e.to)) indegree.set(e.to, (indegree.get(e.to) ?? 0) + 1);
+    for (const e of layoutEdges) {
+      if (indegree.has(e.to ?? e.target)) {
+        indegree.set(e.to ?? e.target, (indegree.get(e.to ?? e.target) ?? 0) + 1);
+      }
     }
 
     const queue = displayNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0);
@@ -258,18 +262,16 @@ export default function UploadPage() {
       const current = queue.shift();
       if (!current) break;
       const level = levels.get(current.id) ?? (serviceLane[current.service] ?? 2);
-      for (const e of rawEdges.filter((edge) => edge.from === current.id)) {
-        const nextLevel = Math.max(
-          level + 1,
-          serviceLane[(displayNodes.find((n) => n.id === e.to)?.service) ?? "generic"] ?? 2
-        );
-        if (!levels.has(e.to) || nextLevel > (levels.get(e.to) ?? 0)) {
-          levels.set(e.to, nextLevel);
+      for (const e of layoutEdges.filter((edge) => (edge.from ?? edge.source) === current.id)) {
+        const targetId = e.to ?? e.target;
+        const targetNode = displayNodes.find((n) => n.id === targetId);
+        const nextLevel = Math.max(level + 1, serviceLane[targetNode?.service ?? "generic"] ?? 2);
+        if (!levels.has(targetId) || nextLevel > (levels.get(targetId) ?? 0)) {
+          levels.set(targetId, nextLevel);
         }
-        indegree.set(e.to, (indegree.get(e.to) ?? 1) - 1);
-        if ((indegree.get(e.to) ?? 0) <= 0) {
-          const targetNode = displayNodes.find((n) => n.id === e.to);
-          if (targetNode) queue.push(targetNode);
+        if (indegree.has(targetId)) {
+          indegree.set(targetId, (indegree.get(targetId) ?? 1) - 1);
+          if ((indegree.get(targetId) ?? 0) <= 0 && targetNode) queue.push(targetNode);
         }
       }
     }
@@ -314,16 +316,53 @@ export default function UploadPage() {
       });
     }
 
-    const edges = rawEdges.map((e: any, idx: number) => ({
-      id: e.id ?? `edge-${idx}-${e.from}-${e.to}`,
-      source: e.from,
-      target: e.to,
-      label: e.relation,
-      style: { stroke: "#64748b" },
-      labelBgStyle: { fill: "#0f172a", fillOpacity: 0.8, color: "#cbd5e1" },
+    const laneSequence = [...new Set(positionedNodes.map((n) => levels.get(n.id) ?? serviceLane[n.data.service]))].sort(
+      (a, b) => a - b
+    );
+
+    const laneBuckets = new Map<number, typeof positionedNodes>();
+    for (const n of positionedNodes) {
+      const lane = levels.get(n.id) ?? serviceLane[n.data.service] ?? 0;
+      const bucket = laneBuckets.get(lane) ?? [];
+      bucket.push(n);
+      laneBuckets.set(lane, bucket);
+    }
+
+    const fallbackEdges: any[] = [];
+    if (!layoutEdges.length && laneSequence.length > 1) {
+      for (let i = 0; i < laneSequence.length - 1; i++) {
+        const currentLane = laneSequence[i];
+        const nextLane = laneSequence[i + 1];
+        const fromNodes = laneBuckets.get(currentLane) ?? [];
+        const toNodes = laneBuckets.get(nextLane) ?? [];
+        for (const from of fromNodes) {
+          for (const to of toNodes) {
+            fallbackEdges.push({
+              id: `fallback-${from.id}-${to.id}`,
+              source: from.id,
+              target: to.id,
+              label: "flows_to",
+              style: { stroke: "#38bdf8", strokeWidth: 1.3 },
+              labelBgStyle: { fill: "#0f172a", fillOpacity: 0.85, color: "#e2e8f0" },
+              animated: true,
+              markerEnd: { type: MarkerType.ArrowClosed, color: "#38bdf8" },
+            });
+          }
+        }
+      }
+    }
+
+    const edges = [...layoutEdges, ...fallbackEdges].map((e: any, idx: number) => ({
+      id: e.id ?? `edge-${idx}-${e.from ?? e.source}-${e.to ?? e.target}`,
+      source: e.from ?? e.source,
+      target: e.to ?? e.target,
+      label: e.relation ?? e.label,
+      style: e.style ?? { stroke: "#64748b" },
+      labelBgStyle: e.labelBgStyle ?? { fill: "#0f172a", fillOpacity: 0.8, color: "#cbd5e1" },
       animated: true,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b" },
+      markerEnd: e.markerEnd ?? { type: MarkerType.ArrowClosed, color: "#64748b" },
     }));
+
     return { nodes: [...groupNodes, ...positionedNodes], edges, rawNodes: displayNodes, rawEdges, legendNodes };
   }, [result, showInfra]);
 
