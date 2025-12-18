@@ -80,13 +80,6 @@ resource "aws_cloudfront_distribution" "ui" {
     default_ttl            = 3600
     max_ttl                = 86400
 
-    dynamic "function_association" {
-      for_each = var.canonical_hostname != "" ? [1] : []
-      content {
-        event_type   = "viewer-request"
-        function_arn = aws_cloudfront_function.apex_to_www[0].arn
-      }
-    }
   }
 
   ordered_cache_behavior {
@@ -134,37 +127,6 @@ resource "aws_cloudfront_distribution" "ui" {
   tags = {
     Name = "${var.project_name}-ui-cf"
   }
-}
-
-locals {
-  apex_hostname = var.canonical_hostname != "" ? replace(var.canonical_hostname, "^www\\.", "") : ""
-}
-
-resource "aws_cloudfront_function" "apex_to_www" {
-  count   = var.canonical_hostname != "" ? 1 : 0
-  name    = "${var.project_name}-apex-to-www"
-  runtime = "cloudfront-js-1.0"
-  comment = "Redirect apex to canonical hostname"
-  publish = true
-
-  code = <<-EOT
-    function handler(event) {
-      var request = event.request;
-      var host = request.headers.host && request.headers.host.value || "";
-      var apex = "${local.apex_hostname}";
-      var canonical = "${var.canonical_hostname}";
-      if (apex && canonical && host === apex) {
-        var qs = request.querystring && request.querystring.length > 0 ? ("?" + request.querystring) : "";
-        var location = "https://" + canonical + request.uri + qs;
-        return {
-          statusCode: 301,
-          statusDescription: "Moved Permanently",
-          headers: { "location": { "value": location } }
-        };
-      }
-      return request;
-    }
-  EOT
 }
 
 # --- CloudFront abuse guardrail ---
