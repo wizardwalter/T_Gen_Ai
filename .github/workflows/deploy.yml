@@ -86,8 +86,6 @@ jobs:
           npm run build
           npm run export || true
 
-      - name: Sync UI to S3
-        run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
       - name: Ensure UI out exists
         run: |
           mkdir -p ui/out
@@ -103,6 +101,8 @@ jobs:
           </html>
           HTML
           fi
+      - name: Sync UI to S3
+        run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
       - name: Invalidate CloudFront
         if: env.CF_DIST_ID != ''
         run: |
