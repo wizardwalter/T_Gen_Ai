@@ -11,7 +11,7 @@ variable "project_name" {
 }
 
 variable "api_image" {
-  description = "Container image URI (ECR) for the API Lambda (package_type=Image)"
+  description = "Container image URI (ECR) for the API container"
   type        = string
   default     = "979067963238.dkr.ecr.us-east-1.amazonaws.com/aidevops-api:latest"
 }
@@ -92,16 +92,4 @@ variable "canonical_hostname" {
   description = "Canonical hostname for redirects (e.g., www.stackgenerate.com). Leave blank to disable apex->www redirect."
   type        = string
   default     = ""
-}
-
-variable "lambda_memory_mb" {
-  description = "Lambda memory for API"
-  type        = number
-  default     = 512
-}
-
-variable "lambda_timeout_seconds" {
-  description = "Lambda timeout for API"
-  type        = number
-  default     = 30
 }
