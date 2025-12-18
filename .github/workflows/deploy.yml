@@ -126,7 +126,8 @@ jobs:
 
           echo "SSM restart command: $CMD_ID"
 
-          for i in {1..30}; do
+          # Allow more time and emit stdout/stderr on failure
+          for i in {1..60}; do
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$CMD_ID" \
               --instance-id "$INSTANCE_ID" \
@@ -139,9 +140,22 @@ jobs:
             fi
             if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
               echo "SSM restart failed with status: $STATUS"
+              aws ssm get-command-invocation \
+                --command-id "$CMD_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --region "$REGION" \
+                --query '{status:Status,stdOut:StandardOutputContent,stdErr:StandardErrorContent}'
               exit 1
             fi
-            sleep 5
+            sleep 10
           done
+
           echo "SSM restart timed out"
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query '{status:Status,stdOut:StandardOutputContent,stdErr:StandardErrorContent}'
           exit 1
+
+          
