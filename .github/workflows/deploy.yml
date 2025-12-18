@@ -84,10 +84,12 @@ jobs:
           set -x
           npm install
           npm run build
-          # Ensure ui/out exists even if we can't export a static bundle.
-          if [ ! -d out ]; then
-            mkdir -p out
-            cat > out/index.html <<'HTML'
+
+      - name: Ensure UI out exists
+        run: |
+          if [ ! -d ui/out ]; then
+            mkdir -p ui/out
+            cat > ui/out/index.html <<'HTML'
 <!doctype html>
 <html lang="en">
   <head><meta charset="utf-8"><title>App deployed</title></head>
