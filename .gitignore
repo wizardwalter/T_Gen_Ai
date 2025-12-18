@@ -10,3 +10,4 @@ terraform/.terraform/
 terraform/.terraform/providers/
 terraform/.terraform/terraform.tfstate
 test-terraform
+scripts/ssm.sh

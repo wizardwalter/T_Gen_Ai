@@ -16,6 +16,7 @@ jobs:
       AWS_REGION: us-east-1
       TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
       TF_VAR_cloudfront_domain_names: ${{ secrets.CLOUDFRONT_DOMAIN_NAMES }}
+      TF_VAR_canonical_hostname: ${{ secrets.TF_VAR_CANONICAL_HOSTNAME }}
       TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
       TF_VAR_next_public_api_base: ${{ secrets.NEXT_PUBLIC_API_BASE }}
       TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -82,6 +83,7 @@ jobs:
         working-directory: terraform
         run: |
           echo "CF_DIST_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_ENV
+          echo "APP_HOST_INSTANCE_ID=$(terraform output -raw app_host_instance_id)" >> $GITHUB_ENV
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -90,23 +92,51 @@ jobs:
 
       - name: Restart app host via SSM
         run: |
-          INSTANCE_ID=$(terraform -chdir=terraform output -raw app_host_instance_id)
-          REGION=$AWS_REGION
-          aws ssm send-command \
+          set -e
+          INSTANCE_ID="${APP_HOST_INSTANCE_ID}"
+          REGION="${AWS_REGION}"
+          UI_IMAGE="${UI_REPO}:latest"
+          API_IMAGE="${API_REPO}:latest"
+
+          CMD_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands='[
-              "set -e",
-              "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
-              "REGION='$AWS_REGION'",
-              "UI_IMAGE=${UI_REPO}:latest",
-              "API_IMAGE=${API_REPO}:latest",
-              "aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com",
-              "docker pull $UI_IMAGE || true",
-              "docker pull $API_IMAGE || true",
-              "docker stop ui || true && docker rm ui || true",
-              "docker stop api || true && docker rm api || true",
-              "docker run -d --name ui -p ${TF_VAR_ui_container_port:-3000}:${TF_VAR_ui_container_port:-3000} -e NEXTAUTH_URL=${TF_VAR_nextauth_url} -e NEXT_PUBLIC_API_BASE=${TF_VAR_next_public_api_base} -e GOOGLE_CLIENT_ID=${TF_VAR_google_client_id} -e GOOGLE_CLIENT_SECRET=${TF_VAR_google_client_secret} -e NEXTAUTH_SECRET=${TF_VAR_nextauth_secret} $UI_IMAGE",
-              "docker run -d --name api -p ${TF_VAR_api_container_port:-4000}:${TF_VAR_api_container_port:-4000} $API_IMAGE"
-            ]' \
-            --region "$REGION"
+            --parameters commands="[
+              \"set -e\",
+              \"ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)\",
+              \"REGION=$REGION\",
+              \"UI_IMAGE=$UI_IMAGE\",
+              \"API_IMAGE=$API_IMAGE\",
+              \"aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\",
+              \"docker pull $UI_IMAGE || true\",
+              \"docker pull $API_IMAGE || true\",
+              \"docker stop ui || true && docker rm ui || true\",
+              \"docker stop api || true && docker rm api || true\",
+              \"docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=${NEXTAUTH_URL} -e NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} -e GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} -e GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} -e NEXTAUTH_SECRET=${NEXTAUTH_SECRET} $UI_IMAGE\",
+              \"docker run -d --name api -p 4000:4000 $API_IMAGE\"
+            ]" \
+            --region "$REGION" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "SSM restart command: $CMD_ID"
+
+          for i in {1..30}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --region "$REGION" \
+              --query 'Status' \
+              --output text || true)
+            if [ "$STATUS" = "Success" ]; then
+              echo "SSM restart succeeded"
+              exit 0
+            fi
+            if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              echo "SSM restart failed with status: $STATUS"
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "SSM restart timed out"
+          exit 1

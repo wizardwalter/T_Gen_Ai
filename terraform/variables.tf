@@ -88,6 +88,12 @@ variable "nextauth_secret" {
   default     = ""
 }
 
+variable "canonical_hostname" {
+  description = "Canonical hostname for redirects (e.g., www.stackgenerate.com). Leave blank to disable apex->www redirect."
+  type        = string
+  default     = ""
+}
+
 variable "lambda_memory_mb" {
   description = "Lambda memory for API"
   type        = number
