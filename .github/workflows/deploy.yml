@@ -103,11 +103,11 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters commands="[
               \"set -e\",
-              \"ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)\",
+              \"ACCOUNT_ID=\$(aws sts get-caller-identity --query Account --output text)\",
               \"REGION=$REGION\",
               \"UI_IMAGE=$UI_IMAGE\",
               \"API_IMAGE=$API_IMAGE\",
-              \"aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\",
+              \"aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin \${ACCOUNT_ID}.dkr.ecr.\${REGION}.amazonaws.com\",
               \"docker pull $UI_IMAGE || true\",
               \"docker pull $API_IMAGE || true\",
               \"docker stop ui || true && docker rm ui || true\",
