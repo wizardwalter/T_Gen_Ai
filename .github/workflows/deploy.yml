@@ -80,37 +80,13 @@ jobs:
         working-directory: ui
         env:
           NEXT_PUBLIC_API_BASE: ${{ env.API_URL }}
-        continue-on-error: true
         run: |
           set -x
           npm install
           npm run build
-
-      - name: Ensure UI out exists
-        if: ${{ always() }}
-        run: |
-          if [ ! -d ui/out ]; then
-            mkdir -p ui/out
-            cat > ui/out/index.html <<'HTML'
-<!doctype html>
-<html lang="en">
-  <head><meta charset="utf-8"><title>App deployed</title></head>
-  <body>
-    <h1>UI build completed</h1>
-    <p>This placeholder exists because no static export was generated. If you need a static site, add a Next.js export.</p>
-  </body>
-</html>
-HTML
-          fi
-
-      - name: Show UI out contents
-        if: ${{ always() }}
-        run: |
-          ls -la ui
-          ls -la ui/out || true
+          npm run export || true
 
       - name: Sync UI to S3
-        if: ${{ always() }}
         run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
 
       - name: Invalidate CloudFront
