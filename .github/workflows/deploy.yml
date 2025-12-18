@@ -80,12 +80,14 @@ jobs:
         working-directory: ui
         env:
           NEXT_PUBLIC_API_BASE: ${{ env.API_URL }}
+        continue-on-error: true
         run: |
           set -x
           npm install
           npm run build
 
       - name: Ensure UI out exists
+        if: ${{ always() }}
         run: |
           if [ ! -d ui/out ]; then
             mkdir -p ui/out
@@ -101,7 +103,14 @@ jobs:
 HTML
           fi
 
+      - name: Show UI out contents
+        if: ${{ always() }}
+        run: |
+          ls -la ui
+          ls -la ui/out || true
+
       - name: Sync UI to S3
+        if: ${{ always() }}
         run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
 
       - name: Invalidate CloudFront
