@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
+      TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
+      TF_VAR_cloudfront_domain_names: ${{ secrets.cloudfront_domain_names }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

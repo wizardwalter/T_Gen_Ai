@@ -22,6 +22,18 @@ variable "cloudfront_price_class" {
   default     = "PriceClass_100"
 }
 
+variable "cloudfront_domain_names" {
+  description = "Optional list of custom domain names (aliases) for CloudFront (e.g., stackgenerate.com, www.stackgenerate.com)"
+  type        = list(string)
+  default     = []
+}
+
+variable "acm_certificate_arn" {
+  description = "Optional ACM certificate ARN (in us-east-1) for the CloudFront distribution"
+  type        = string
+  default     = ""
+}
+
 variable "lambda_memory_mb" {
   description = "Lambda memory for API"
   type        = number

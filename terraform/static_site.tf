@@ -38,6 +38,7 @@ resource "aws_cloudfront_distribution" "ui" {
   price_class         = var.cloudfront_price_class
   comment             = "${var.project_name} UI"
   default_root_object = "index.html"
+  aliases             = var.cloudfront_domain_names
 
   origin {
     domain_name              = aws_s3_bucket.ui.bucket_regional_domain_name
@@ -72,8 +73,20 @@ resource "aws_cloudfront_distribution" "ui" {
     }
   }
 
-  viewer_certificate {
-    cloudfront_default_certificate = true
+  dynamic "viewer_certificate" {
+    for_each = var.acm_certificate_arn != "" ? [1] : []
+    content {
+      acm_certificate_arn      = var.acm_certificate_arn
+      ssl_support_method       = "sni-only"
+      minimum_protocol_version = "TLSv1.2_2021"
+    }
+  }
+
+  dynamic "viewer_certificate" {
+    for_each = var.acm_certificate_arn == "" ? [1] : []
+    content {
+      cloudfront_default_certificate = true
+    }
   }
 
   tags = {
