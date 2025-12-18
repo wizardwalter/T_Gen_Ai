@@ -83,12 +83,21 @@ locals {
     systemctl start docker
 
     REGION="${data.aws_region.current.name}"
+
+    # Create refresh script
+    cat >/usr/local/bin/app-refresh.sh <<'REFRESH'
+    #!/bin/bash
+    set -e
+    REGION="${data.aws_region.current.name}"
     ACCOUNT_ID=$(curl -s http://169.254.169.254/latest/meta-data/identity-credentials/ec2/info | grep -o '"AccountId":"[^"]*"' | cut -d'"' -f4 || aws sts get-caller-identity --query Account --output text)
 
-    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
-
-    UI_IMAGE="${var.ui_image != "" ? var.ui_image : "$ACCOUNT_ID.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.project_name}-ui:latest"}"
+    UI_IMAGE="${var.ui_image}"
+    if [ -z "$UI_IMAGE" ]; then
+      UI_IMAGE="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/${var.project_name}-ui:latest"
+    fi
     API_IMAGE="${var.api_image}"
+
+    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
     docker pull $UI_IMAGE || true
     docker pull $API_IMAGE || true
@@ -106,6 +115,29 @@ locals {
 
     docker run -d --name api -p ${var.api_container_port}:${var.api_container_port} \
       $API_IMAGE
+    REFRESH
+
+    chmod +x /usr/local/bin/app-refresh.sh
+
+    # Systemd unit to run refresh at boot
+    cat >/etc/systemd/system/app-refresh.service <<'UNIT'
+    [Unit]
+    Description=Refresh app containers from ECR
+    After=network-online.target docker.service
+    Wants=network-online.target
+
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/local/bin/app-refresh.sh
+    RemainAfterExit=no
+
+    [Install]
+    WantedBy=multi-user.target
+    UNIT
+
+    systemctl daemon-reload
+    systemctl enable app-refresh.service
+    systemctl start app-refresh.service
   EOF
 }
 
