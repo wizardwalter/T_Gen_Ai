@@ -18,11 +18,6 @@ output "ui_bucket_name" {
   value       = aws_s3_bucket.ui.bucket
 }
 
-output "api_url" {
-  description = "Base URL for the API Gateway HTTP API"
-  value       = aws_apigatewayv2_api.http_api.api_endpoint
-}
-
 output "api_ecr_repository_url" {
   description = "ECR repository URL for the API image"
   value       = aws_ecr_repository.api.repository_url
