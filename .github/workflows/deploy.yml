@@ -88,7 +88,21 @@ jobs:
 
       - name: Sync UI to S3
         run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
-
+      - name: Ensure UI out exists
+        run: |
+          mkdir -p ui/out
+          if [ ! -f ui/out/index.html ]; then
+            cat > ui/out/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head><meta charset="utf-8"><title>App deployed</title></head>
+            <body>
+              <h1>Placeholder</h1>
+              <p>No static export was generated.</p>
+            </body>
+          </html>
+          HTML
+          fi
       - name: Invalidate CloudFront
         if: env.CF_DIST_ID != ''
         run: |
