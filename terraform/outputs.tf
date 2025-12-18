@@ -8,6 +8,11 @@ output "cloudfront_distribution_id" {
   value       = aws_cloudfront_distribution.ui.id
 }
 
+output "cloudfront_aliases" {
+  description = "Configured CloudFront aliases"
+  value       = aws_cloudfront_distribution.ui.aliases
+}
+
 output "ui_bucket_name" {
   description = "S3 bucket for the UI static site"
   value       = aws_s3_bucket.ui.bucket

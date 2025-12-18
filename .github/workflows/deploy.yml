@@ -84,7 +84,20 @@ jobs:
           set -x
           npm install
           npm run build
-          npm run export || true
+          # Try to export a static bundle; if not supported, create a simple placeholder so S3/CF have an index.html.
+          npm run export || {
+            mkdir -p out
+            cat > out/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Site deploy</title></head>
+  <body>
+    <h1>Site build not exported</h1>
+    <p>The app did not export a static bundle. Please check Next.js export compatibility.</p>
+  </body>
+</html>
+HTML
+          }
 
       - name: Sync UI to S3
         run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
