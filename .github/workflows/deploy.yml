@@ -16,6 +16,11 @@ jobs:
       AWS_REGION: us-east-1
       TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
       TF_VAR_cloudfront_domain_names: ${{ secrets.cloudfront_domain_names }}
+      TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
+      TF_VAR_next_public_api_base: ${{ secrets.NEXT_PUBLIC_API_BASE }}
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,18 +52,27 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "API_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api" >> $GITHUB_ENV
           echo "TF_VAR_api_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api:latest" >> $GITHUB_ENV
+          echo "UI_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui" >> $GITHUB_ENV
+          echo "TF_VAR_ui_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui:latest" >> $GITHUB_ENV
 
       - name: Terraform apply (create ECR first)
         working-directory: terraform
-        run: terraform apply -auto-approve -target=aws_ecr_repository.api
+        run: terraform apply -auto-approve -target=aws_ecr_repository.api -target=aws_ecr_repository.ui
 
       - name: Login to ECR
-        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $API_REPO
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $API_REPO
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $UI_REPO
 
       - name: Build and push API image
         run: |
           docker build -t $API_REPO:latest api
           docker push $API_REPO:latest
+
+      - name: Build and push UI image
+        run: |
+          docker build -t $UI_REPO:latest ui
+          docker push $UI_REPO:latest
 
       - name: Terraform Apply
         working-directory: terraform
@@ -67,45 +81,32 @@ jobs:
       - name: Fetch outputs for UI deploy
         working-directory: terraform
         run: |
-          echo "UI_BUCKET=$(terraform output -raw ui_bucket_name)" >> $GITHUB_ENV
           echo "CF_DIST_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_ENV
-          echo "API_URL=$(terraform output -raw api_url)" >> $GITHUB_ENV
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Build UI
-        working-directory: ui
-        env:
-          NEXT_PUBLIC_API_BASE: ${{ env.API_URL }}
+      - name: Restart app host via SSM
         run: |
-          set -x
-          npm install
-          npm run build
-          npm run export || true
-
-      - name: Ensure UI out exists
-        run: |
-          mkdir -p ui/out
-          if [ ! -f ui/out/index.html ]; then
-            cat > ui/out/index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-            <head><meta charset="utf-8"><title>App deployed</title></head>
-            <body>
-              <h1>Placeholder</h1>
-              <p>No static export was generated.</p>
-            </body>
-          </html>
-          HTML
-          fi
-      - name: Sync UI to S3
-        run: aws s3 sync ui/out s3://$UI_BUCKET/ --delete
-      - name: Invalidate CloudFront
-        if: env.CF_DIST_ID != ''
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id $CF_DIST_ID \
-            --paths "/*"
+          INSTANCE_ID=$(terraform -chdir=terraform output -raw app_host_instance_id)
+          REGION=$AWS_REGION
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands='[
+              "set -e",
+              "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
+              "REGION='$AWS_REGION'",
+              "UI_IMAGE=${UI_REPO}:latest",
+              "API_IMAGE=${API_REPO}:latest",
+              "aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com",
+              "docker pull $UI_IMAGE || true",
+              "docker pull $API_IMAGE || true",
+              "docker stop ui || true && docker rm ui || true",
+              "docker stop api || true && docker rm api || true",
+              "docker run -d --name ui -p ${TF_VAR_ui_container_port:-3000}:${TF_VAR_ui_container_port:-3000} -e NEXTAUTH_URL=${TF_VAR_nextauth_url} -e NEXT_PUBLIC_API_BASE=${TF_VAR_next_public_api_base} -e GOOGLE_CLIENT_ID=${TF_VAR_google_client_id} -e GOOGLE_CLIENT_SECRET=${TF_VAR_google_client_secret} -e NEXTAUTH_SECRET=${TF_VAR_nextauth_secret} $UI_IMAGE",
+              "docker run -d --name api -p ${TF_VAR_api_container_port:-4000}:${TF_VAR_api_container_port:-4000} $API_IMAGE"
+            ]' \
+            --region "$REGION"

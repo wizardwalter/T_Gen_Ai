@@ -34,25 +34,39 @@ resource "aws_cloudfront_origin_access_control" "ui" {
 }
 
 resource "aws_cloudfront_distribution" "ui" {
-  enabled             = true
-  price_class         = var.cloudfront_price_class
-  comment             = "${var.project_name} UI"
-  default_root_object = "index.html"
-  aliases             = var.cloudfront_domain_names
+  enabled     = true
+  price_class = var.cloudfront_price_class
+  comment     = "${var.project_name} UI"
+  aliases     = var.cloudfront_domain_names
 
   origin {
-    domain_name              = aws_s3_bucket.ui.bucket_regional_domain_name
-    origin_id                = "ui-bucket"
-    origin_access_control_id = aws_cloudfront_origin_access_control.ui.id
-    s3_origin_config {
-      origin_access_identity = ""
+    domain_name = aws_eip.app_host.public_dns
+    origin_id   = "ui-origin"
+
+    custom_origin_config {
+      http_port              = var.ui_container_port
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin {
+    domain_name = aws_eip.app_host.public_dns
+    origin_id   = "api-origin"
+
+    custom_origin_config {
+      http_port              = var.api_container_port
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "ui-bucket"
+    target_origin_id = "ui-origin"
 
     forwarded_values {
       query_string = false
@@ -65,6 +79,26 @@ resource "aws_cloudfront_distribution" "ui" {
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
+  }
+
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    target_origin_id = "api-origin"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods   = ["GET", "HEAD"]
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
   }
 
   restrictions {
@@ -92,30 +126,6 @@ resource "aws_cloudfront_distribution" "ui" {
   tags = {
     Name = "${var.project_name}-ui-cf"
   }
-}
-
-# Allow CloudFront to read from the bucket
-data "aws_iam_policy_document" "ui_bucket" {
-  statement {
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.ui.arn}/*"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.ui.arn]
-    }
-  }
-}
-
-resource "aws_s3_bucket_policy" "ui" {
-  bucket = aws_s3_bucket.ui.id
-  policy = data.aws_iam_policy_document.ui_bucket.json
 }
 
 # --- CloudFront abuse guardrail ---

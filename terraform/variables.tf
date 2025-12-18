@@ -16,6 +16,12 @@ variable "api_image" {
   default     = "979067963238.dkr.ecr.us-east-1.amazonaws.com/aidevops-api:latest"
 }
 
+variable "ui_image" {
+  description = "Container image URI (ECR) for the UI container"
+  type        = string
+  default     = ""
+}
+
 variable "cloudfront_price_class" {
   description = "CloudFront price class"
   type        = string
@@ -30,6 +36,54 @@ variable "cloudfront_domain_names" {
 
 variable "acm_certificate_arn" {
   description = "Optional ACM certificate ARN (in us-east-1) for the CloudFront distribution"
+  type        = string
+  default     = ""
+}
+
+variable "host_instance_type" {
+  description = "EC2 instance type for the app host"
+  type        = string
+  default     = "t3.nano"
+}
+
+variable "ui_container_port" {
+  description = "Port the UI container listens on"
+  type        = number
+  default     = 3000
+}
+
+variable "api_container_port" {
+  description = "Port the API container listens on"
+  type        = number
+  default     = 4000
+}
+
+variable "nextauth_url" {
+  description = "NEXTAUTH_URL for the UI container"
+  type        = string
+  default     = ""
+}
+
+variable "next_public_api_base" {
+  description = "Public API base URL for the UI container"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_id" {
+  description = "Google OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth client secret"
+  type        = string
+  default     = ""
+}
+
+variable "nextauth_secret" {
+  description = "NEXTAUTH_SECRET for the UI container"
   type        = string
   default     = ""
 }

@@ -27,3 +27,18 @@ output "api_ecr_repository_url" {
   description = "ECR repository URL for the API image"
   value       = aws_ecr_repository.api.repository_url
 }
+
+output "ui_ecr_repository_url" {
+  description = "ECR repository URL for the UI image"
+  value       = aws_ecr_repository.ui.repository_url
+}
+
+output "app_host_eip" {
+  description = "Public IP for the app host EC2"
+  value       = aws_eip.app_host.public_ip
+}
+
+output "app_host_instance_id" {
+  description = "Instance ID for the app host EC2"
+  value       = aws_instance.app_host.id
+}
