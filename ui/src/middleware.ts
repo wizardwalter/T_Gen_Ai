@@ -4,8 +4,11 @@ import { NextResponse } from "next/server";
 // Redirect apex domain to www so NextAuth/session cookies and OAuth callbacks
 // use a single canonical host.
 export function middleware(req: NextRequest) {
-  const host = req.headers.get("host") || "";
-  if (host === "stackgenerate.com") {
+  const host = (req.headers.get("host") || "").toLowerCase();
+  const isApex =
+    host === "stackgenerate.com" || host.startsWith("stackgenerate.com:");
+
+  if (isApex) {
     const url = req.nextUrl.clone();
     url.host = "www.stackgenerate.com";
     url.protocol = "https:";
