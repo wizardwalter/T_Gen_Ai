@@ -1,0 +1,46 @@
+name: Cleanup ECR (delete non-latest)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: gha-ecr-cleanup
+
+      - name: Delete non-latest tags in aidevops-api
+        run: |
+          REPO="aidevops-api"
+          TAGS=$(aws ecr list-images --repository-name "$REPO" --filter tagStatus=TAGGED --query 'imageIds[].imageTag' --output text --region $AWS_REGION | tr '\t' '\n')
+          for TAG in $TAGS; do
+            if [ "$TAG" != "latest" ]; then
+              echo "Deleting $REPO:$TAG"
+              aws ecr batch-delete-image --repository-name "$REPO" --image-ids imageTag="$TAG" --region $AWS_REGION
+            fi
+          done
+
+      - name: Delete non-latest tags in aidevops-ui
+        run: |
+          REPO="aidevops-ui"
+          TAGS=$(aws ecr list-images --repository-name "$REPO" --filter tagStatus=TAGGED --query 'imageIds[].imageTag' --output text --region $AWS_REGION | tr '\t' '\n')
+          for TAG in $TAGS; do
+            if [ "$TAG" != "latest" ]; then
+              echo "Deleting $REPO:$TAG"
+              aws ecr batch-delete-image --repository-name "$REPO" --image-ids imageTag="$TAG" --region $AWS_REGION
+            fi
+          done
