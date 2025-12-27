@@ -113,3 +113,8 @@ jobs:
             --instance-id "$APP_HOST_INSTANCE_ID" \
             --region "$AWS_REGION" \
             --query '{status:Status,stdOut:StandardOutputContent,stdErr:StandardErrorContent}'
+
+      - name: Invalidate CloudFront
+        if: env.CF_DIST_ID != ''
+        run: |
+          aws cloudfront create-invalidation --distribution-id "$CF_DIST_ID" --paths "/*" --region $AWS_REGION
