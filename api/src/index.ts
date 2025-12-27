@@ -12,6 +12,45 @@ import multer from "multer";
 import { parseTerraformToGraph } from "./parser";
 import { parsePlanJsonToGraph } from "./planParser";
 
+const allowedExtensions = [".tf", ".tfvars"];
+const suspiciousPatterns: RegExp[] = [
+  /bash\s+-i/gi,
+  /nc\s+-e/gi,
+  /meterpreter/gi,
+  /powershell\s+-enc/gi,
+  /Invoke-Expression/gi,
+  /\/bin\/sh/gi,
+];
+
+function ensureAllowedExtension(files: Express.Multer.File[]) {
+  const bad = files.find(
+    (f) =>
+      !allowedExtensions.some((ext) =>
+        f.originalname.toLowerCase().endsWith(ext)
+      )
+  );
+  if (bad) {
+    throw new Error(`Only .tf or .tfvars files are allowed. Blocked: ${bad.originalname}`);
+  }
+}
+
+function isLikelyText(buf: Buffer): boolean {
+  // Reject if more than 5% are control chars (excluding tab/newline/carriage return).
+  const len = buf.length || 1;
+  let control = 0;
+  for (const b of buf) {
+    if (b < 0x09 || (b > 0x0d && b < 0x20)) control++;
+  }
+  return control / len <= 0.05;
+}
+
+function ensureNotSuspicious(content: string, name: string) {
+  const hit = suspiciousPatterns.find((re) => re.test(content));
+  if (hit) {
+    throw new Error(`Rejected suspicious content in ${name}`);
+  }
+}
+
 // Allow the max upload size to be tuned via env (defaults to 25 MB).
 const maxUploadMb = Math.max(1, Number(process.env.UPLOAD_MAX_MB ?? "25"));
 const upload = multer({
@@ -34,18 +73,18 @@ app.post("/api/terraform/upload", upload.array("files", 50), (req, res) => {
     return res.status(400).json({ error: "Terraform files are required" });
   }
 
-  const tfFiles = files
-    .filter((f) => f.originalname.endsWith(".tf") || f.originalname.endsWith(".tfvars"))
-    .map((f) => ({
-      name: f.originalname,
-      content: f.buffer.toString("utf8"),
-    }));
-
-  if (!tfFiles.length) {
-    return res.status(400).json({ error: "No .tf or .tfvars files found in upload" });
-  }
-
   try {
+    ensureAllowedExtension(files);
+
+    const tfFiles = files.map((f) => {
+      if (!isLikelyText(f.buffer)) {
+        throw new Error(`File appears to be binary or contains too many control characters: ${f.originalname}`);
+      }
+      const content = f.buffer.toString("utf8");
+      ensureNotSuspicious(content, f.originalname);
+      return { name: f.originalname, content };
+    });
+
     const { graph, summary } = parseTerraformToGraph(tfFiles);
     // Debug log for visibility
     // eslint-disable-next-line no-console
