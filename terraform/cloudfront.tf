@@ -83,6 +83,26 @@ resource "aws_cloudfront_distribution" "ui" {
   }
 
   ordered_cache_behavior {
+    path_pattern     = "/api/auth/*"
+    target_origin_id = "ui-origin"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods   = ["GET", "HEAD"]
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  ordered_cache_behavior {
     path_pattern     = "/api/*"
     target_origin_id = "api-origin"
     allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]

@@ -1,0 +1,105 @@
+name: Infra Plan & Apply
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
+      TF_VAR_cloudfront_domain_names: ${{ secrets.CLOUDFRONT_DOMAIN_NAMES }}
+      TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
+      TF_VAR_next_public_api_base: ${{ secrets.NEXT_PUBLIC_API_BASE }}
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: gha-infra-plan
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: >
+          terraform init
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="key=${{ secrets.TF_STATE_KEY }}"
+          -backend-config="region=${{ env.AWS_REGION }}"
+          -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -out=tfplan.binary
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan.binary
+          path: terraform/tfplan.binary
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      AWS_REGION: us-east-1
+      TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
+      TF_VAR_cloudfront_domain_names: ${{ secrets.CLOUDFRONT_DOMAIN_NAMES }}
+      TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
+      TF_VAR_next_public_api_base: ${{ secrets.NEXT_PUBLIC_API_BASE }}
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: gha-infra-apply
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: >
+          terraform init
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="key=${{ secrets.TF_STATE_KEY }}"
+          -backend-config="region=${{ env.AWS_REGION }}"
+          -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan.binary
+          path: terraform
+
+      - name: Terraform Apply (requires environment approval)
+        working-directory: terraform
+        run: terraform apply tfplan.binary
