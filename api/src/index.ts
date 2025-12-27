@@ -106,9 +106,11 @@ app.post("/api/terraform/upload", upload.array("files", 50), (req, res) => {
       ],
     });
   } catch (err) {
-    // Catch-all to avoid crashing the server if the parser throws unexpectedly.
-    return res.status(500).json({
-      error: "Parser failed unexpectedly",
+    // Catch validation/parser errors and return a clear response.
+    // eslint-disable-next-line no-console
+    console.error("[upload] failed", err);
+    return res.status(400).json({
+      error: "Upload failed",
       details: (err as Error).message,
     });
   }
