@@ -1,6 +1,24 @@
-# Deployment notes
+# Deployment
 
-- On boot, user data installs Docker, pulls the latest UI/API images from ECR, and starts the `ui` (port 3000) and `api` (port 4000) containers with the env vars passed via Terraform.
-- The GitHub Actions `deploy.yml` still uses an SSM step to pull and restart containers. If that SSM step hangs, cancel the stuck command or reboot the EC2 host; user data will restart the containers.
-- CloudFront aliases: `stackgenerate.com` and `www.stackgenerate.com` (ACM in us-east-1).
-- Secrets used by the workflow: `NEXTAUTH_URL`, `NEXT_PUBLIC_API_BASE`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`, `TF_VAR_acm_certificate_arn`, `CLOUDFRONT_DOMAIN_NAMES`, TF state S3/Dynamo settings, `AWS_ROLE_ARN`, `UI_REPO/API_REPO` inferred.
+- User data installs Docker and starts `ui` (3000) and `api` (4000) from ECR on every boot. If you reboot, containers will refresh automatically.
+- CloudFront aliases: `stackgenerate.com` / `www.stackgenerate.com` (ACM in us-east-1).
+- Canonical host: `www.stackgenerate.com` (middleware redirects apex → www). Set `NEXTAUTH_URL` and `NEXT_PUBLIC_API_BASE` to the www host.
+
+## Workflows
+
+- `.github/workflows/deploy.yml` (infra): builds/pushes images, runs Terraform, SSM restart. Use for infra changes.
+- `.github/workflows/deploy-app.yml` (fast app deploy): builds/pushes images, reboots app host, waits for EC2/SSM, runs `docker ps`.
+- `.github/workflows/restart-app-host.yml` (manual): reboots app host, waits for EC2/SSM, runs `docker ps`.
+
+## Required secrets
+
+- `AWS_ROLE_ARN`, `AWS_REGION=us-east-1`
+- TF state: `TF_STATE_BUCKET`, `TF_STATE_KEY`, `TF_STATE_LOCK_TABLE`
+- TLS/aliases: `TF_VAR_acm_certificate_arn`, `CLOUDFRONT_DOMAIN_NAMES`
+- App env: `NEXTAUTH_URL`, `NEXT_PUBLIC_API_BASE`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`
+
+## If deploy stalls
+
+- Check SSM: cancel stuck command, `sudo systemctl restart amazon-ssm-agent` on the box, or just reboot (user data will restart containers).
+- Check cloud-init: `/var/log/cloud-init-output.log`
+- Verify containers: `docker ps` (via SSM or SSH/Session Manager)

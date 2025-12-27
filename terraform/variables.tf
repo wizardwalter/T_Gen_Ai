@@ -43,7 +43,7 @@ variable "acm_certificate_arn" {
 variable "host_instance_type" {
   description = "EC2 instance type for the app host"
   type        = string
-  default     = "t3.nano"
+  default     = "t3.micro"
 }
 
 variable "ui_container_port" {
