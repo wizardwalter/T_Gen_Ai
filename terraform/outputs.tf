@@ -37,3 +37,13 @@ output "app_host_instance_id" {
   description = "Instance ID for the app host EC2"
   value       = aws_instance.app_host.id
 }
+
+output "icons_bucket_name" {
+  description = "S3 bucket for public icons"
+  value       = aws_s3_bucket.icons.bucket
+}
+
+output "icons_base_url" {
+  description = "Base URL for icons bucket"
+  value       = "https://${aws_s3_bucket.icons.bucket}.s3.amazonaws.com"
+}

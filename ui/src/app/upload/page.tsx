@@ -47,30 +47,37 @@ const serviceColors: Record<string, string> = {
   generic: "#94a3b8",
 };
 
+const ICON_BASE =
+  (process.env.NEXT_PUBLIC_ICON_BASE ?? "").replace(/\/+$/, "") || "";
+
+const iconPath = (p: string) => `${ICON_BASE}${p.startsWith("/") ? p : `/${p}`}`;
+
 const serviceIcons: Record<string, string> = {
-  vpc: "/aws-icons/Networking-Content-Delivery/VPC-Lattice.svg",
-  route53: "/aws-icons/Networking-Content-Delivery/Route-53.svg",
-  cloudfront: "/aws-icons/Networking-Content-Delivery/CloudFront.svg",
-  elb: "/aws-icons/Networking-Content-Delivery/Elastic-Load-Balancing.svg",
-  ec2: "/aws-icons/Compute/EC2.svg",
-  ecs: "/aws-icons/Containers/Elastic-Container-Service.svg",
-  ecr: "/aws-icons/Containers/Elastic-Container-Registry.svg",
-  eks: "/aws-icons/Containers/Elastic-Kubernetes-Service.svg",
-  lambda: "/aws-icons/Compute/Lambda.svg",
-  apigw: "/aws-icons/App-Integration/API-Gateway.svg",
-  s3: "/aws-icons/Storage/Simple-Storage-Service.svg",
-  efs: "/aws-icons/Storage/EFS.svg",
-  rds: "/aws-icons/Database/RDS.svg",
-  dynamodb: "/aws-icons/Database/DynamoDB.svg",
-  elasticache: "/aws-icons/Database/ElastiCache.svg",
-  sqs: "/aws-icons/App-Integration/Simple-Queue-Service.svg",
-  sns: "/aws-icons/App-Integration/Simple-Notification-Service.svg",
-  eventbridge: "/aws-icons/App-Integration/EventBridge.svg",
-  iam: "/aws-icons/Security-Identity-Compliance/Identity-and-Access-Management.svg",
-  kms: "/aws-icons/Security-Identity-Compliance/Key-Management-Service.svg",
-  secrets: "/aws-icons/Security-Identity-Compliance/Secrets-Manager.svg",
-  ssm: "/aws-icons/Management-Governance/Systems-Manager.svg",
-  observability: "/aws-icons/Management-Governance/CloudWatch.svg",
+  vpc: iconPath("/aws-icons/Networking-Content-Delivery/VPC-Lattice.svg"),
+  route53: iconPath("/aws-icons/Networking-Content-Delivery/Route-53.svg"),
+  cloudfront: iconPath("/aws-icons/Networking-Content-Delivery/CloudFront.svg"),
+  elb: iconPath("/aws-icons/Networking-Content-Delivery/Elastic-Load-Balancing.svg"),
+  ec2: iconPath("/aws-icons/Compute/EC2.svg"),
+  ecs: iconPath("/aws-icons/Containers/Elastic-Container-Service.svg"),
+  ecr: iconPath("/aws-icons/Containers/Elastic-Container-Registry.svg"),
+  eks: iconPath("/aws-icons/Containers/Elastic-Kubernetes-Service.svg"),
+  lambda: iconPath("/aws-icons/Compute/Lambda.svg"),
+  apigw: iconPath("/aws-icons/App-Integration/API-Gateway.svg"),
+  s3: iconPath("/aws-icons/Storage/Simple-Storage-Service.svg"),
+  efs: iconPath("/aws-icons/Storage/EFS.svg"),
+  rds: iconPath("/aws-icons/Database/RDS.svg"),
+  dynamodb: iconPath("/aws-icons/Database/DynamoDB.svg"),
+  elasticache: iconPath("/aws-icons/Database/ElastiCache.svg"),
+  sqs: iconPath("/aws-icons/App-Integration/Simple-Queue-Service.svg"),
+  sns: iconPath("/aws-icons/App-Integration/Simple-Notification-Service.svg"),
+  eventbridge: iconPath("/aws-icons/App-Integration/EventBridge.svg"),
+  iam: iconPath(
+    "/aws-icons/Security-Identity-Compliance/Identity-and-Access-Management.svg"
+  ),
+  kms: iconPath("/aws-icons/Security-Identity-Compliance/Key-Management-Service.svg"),
+  secrets: iconPath("/aws-icons/Security-Identity-Compliance/Secrets-Manager.svg"),
+  ssm: iconPath("/aws-icons/Management-Governance/Systems-Manager.svg"),
+  observability: iconPath("/aws-icons/Management-Governance/CloudWatch.svg"),
   // Inline gear icon data URI as a neutral fallback for unmapped services.
   generic:
     "data:image/svg+xml;utf8," +
