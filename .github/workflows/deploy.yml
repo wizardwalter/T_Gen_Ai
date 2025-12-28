@@ -24,6 +24,7 @@ jobs:
       TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       NEXT_PUBLIC_API_BASE: ${{ secrets.NEXT_PUBLIC_API_BASE }}
+      NEXT_PUBLIC_ICON_BASE: ${{ secrets.NEXT_PUBLIC_ICON_BASE }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
@@ -80,6 +81,7 @@ jobs:
           docker build \
             --build-arg NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} \
             --build-arg NEXTAUTH_URL=${NEXTAUTH_URL} \
+            --build-arg NEXT_PUBLIC_ICON_BASE=${NEXT_PUBLIC_ICON_BASE} \
             -t $UI_REPO:latest ui
           docker push $UI_REPO:latest
 
@@ -143,7 +145,7 @@ jobs:
               \"docker pull $API_IMAGE || true\",
               \"docker stop ui || true && docker rm ui || true\",
               \"docker stop api || true && docker rm api || true\",
-              \"docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=${NEXTAUTH_URL} -e NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} -e GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} -e GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} -e NEXTAUTH_SECRET=${NEXTAUTH_SECRET} $UI_IMAGE\",
+              \"docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=${NEXTAUTH_URL} -e NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} -e NEXT_PUBLIC_ICON_BASE=${NEXT_PUBLIC_ICON_BASE} -e GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} -e GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} -e NEXTAUTH_SECRET=${NEXTAUTH_SECRET} $UI_IMAGE\",
               \"docker run -d --name api -p 4000:4000 $API_IMAGE\",
               \"docker ps\"
             ]" \

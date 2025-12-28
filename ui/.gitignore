@@ -10,8 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
-# icons
+# icons (keep out of git; you can sync to S3 instead)
 public/aws-icons/
+public/aws-used/**
 
 # testing
 /coverage
