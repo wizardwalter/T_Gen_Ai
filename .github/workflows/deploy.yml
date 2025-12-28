@@ -77,7 +77,10 @@ jobs:
 
       - name: Build and push UI image
         run: |
-          docker build -t $UI_REPO:latest ui
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} \
+            --build-arg NEXTAUTH_URL=${NEXTAUTH_URL} \
+            -t $UI_REPO:latest ui
           docker push $UI_REPO:latest
 
       - name: Terraform Apply
