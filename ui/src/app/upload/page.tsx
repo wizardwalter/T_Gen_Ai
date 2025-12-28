@@ -6,7 +6,13 @@ import { useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, MarkerType, type Node, type NodeMouseHandler } from "reactflow";
 import "reactflow/dist/style.css";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
+const rawApiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
+// Normalize: drop trailing slash and a trailing "/api" if it was included in the secret,
+// so we don't end up calling /api/api/...
+const apiBaseTrimmed = rawApiBase.replace(/\/+$/, "");
+const API_BASE = apiBaseTrimmed.endsWith("/api")
+  ? apiBaseTrimmed.slice(0, -4)
+  : apiBaseTrimmed;
 
 type UploadResult = {
   files: { name: string; size: number; mimetype: string }[];
