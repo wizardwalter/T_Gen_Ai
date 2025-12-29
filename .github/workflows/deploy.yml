@@ -132,28 +132,28 @@ jobs:
           UI_IMAGE="${UI_REPO}:latest"
           API_IMAGE="${API_REPO}:latest"
 
-          CMD_ID=$(aws ssm send-command \
+                    CMD_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --parameters commands="[
-              \"bash -lc 'set -e; \
-REGION=${AWS_REGION}; \
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text); \
-UI_IMAGE=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui:latest; \
-API_IMAGE=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api:latest; \
-if ! command -v docker >/dev/null 2>&1; then yum update -y && (amazon-linux-extras install docker -y || yum install -y docker); systemctl enable docker; systemctl start docker; fi; \
-aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com; \
-docker pull $UI_IMAGE || true; \
-docker pull $API_IMAGE || true; \
-docker stop ui || true && docker rm ui || true; \
-docker stop api || true && docker rm api || true; \
-docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=${NEXTAUTH_URL} -e NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} -e NEXT_PUBLIC_ICON_BASE=${NEXT_PUBLIC_ICON_BASE} -e GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} -e GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} -e NEXTAUTH_SECRET=${NEXTAUTH_SECRET} $UI_IMAGE; \
-docker run -d --name api -p 4000:4000 $API_IMAGE; \
-docker ps' \"
-            ]" \
-            --region "$REGION" \
-            --query 'Command.CommandId' \
-            --output text)
+              'set -e
+              REGION=${AWS_REGION}
+              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              UI_IMAGE=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui:latest
+              API_IMAGE=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api:latest
+              if ! command -v docker >/dev/null 2>&1; then yum update -y && (amazon-linux-extras install docker -y || yum install -y docker); systemctl enable docker; systemctl start docker; fi
+              aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+              docker pull $UI_IMAGE || true
+              docker pull $API_IMAGE || true
+              docker stop ui || true && docker rm ui || true
+              docker stop api || true && docker rm api || true
+              docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=${NEXTAUTH_URL} -e NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} -e NEXT_PUBLIC_ICON_BASE=${NEXT_PUBLIC_ICON_BASE} -e GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} -e GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} -e NEXTAUTH_SECRET=${NEXTAUTH_SECRET} $UI_IMAGE
+              docker run -d --name api -p 4000:4000 $API_IMAGE
+              docker ps'
+                          ]" \
+                          --region "$REGION" \
+                          --query 'Command.CommandId' \
+                          --output text)
 
           echo "SSM restart command: $CMD_ID"
 
