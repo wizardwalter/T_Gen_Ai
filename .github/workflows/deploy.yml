@@ -81,6 +81,7 @@ jobs:
           docker build \
             --build-arg NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} \
             --build-arg NEXTAUTH_URL=${NEXTAUTH_URL} \
+            --build-arg NEXT_PUBLIC_ICON_BASE=${NEXT_PUBLIC_ICON_BASE} \
             -t $UI_REPO:latest ui
           docker push $UI_REPO:latest
 
