@@ -1,24 +1,36 @@
-# Deployment
+# StackGenerate
 
-- User data installs Docker and starts `ui` (3000) and `api` (4000) from ECR on every boot. If you reboot, containers will refresh automatically.
-- CloudFront aliases: `stackgenerate.com` / `www.stackgenerate.com` (ACM in us-east-1).
-- Canonical host: `www.stackgenerate.com` (middleware redirects apex → www). Set `NEXTAUTH_URL` and `NEXT_PUBLIC_API_BASE` to the www host.
+Terraform-to-architecture visualizer: drop in a Terraform folder, get back a clean AWS diagram with icons, lanes, and a legend. Google SSO keeps auth simple, and a lightweight Express API does the parsing.
 
-## Workflows
+## What it does
+- Upload Terraform modules; backend parses HCL and emits nodes/edges.
+- ReactFlow-powered diagram with service-aware layout, VPC grouping, and AWS icon set (served via `NEXT_PUBLIC_ICON_BASE` S3 path).
+- Toggle infra overlays (Route53/CloudFront/observability) and inspect node metadata/relations.
+- Deployed on AWS: CloudFront in front of an EC2 host running Dockerized `ui` and `api` pulled from ECR.
 
-- `.github/workflows/deploy.yml` (infra): builds/pushes images, runs Terraform, SSM restart. Use for infra changes.
-- `.github/workflows/deploy-app.yml` (fast app deploy): builds/pushes images, reboots app host, waits for EC2/SSM, runs `docker ps`.
-- `.github/workflows/restart-app-host.yml` (manual): reboots app host, waits for EC2/SSM, runs `docker ps`.
+## Stack
+- Frontend: Next.js 16, React 19, ReactFlow, Tailwind (v4 tooling).
+- Auth: NextAuth (Google).
+- Backend: Express + TypeScript, HCL parsing via `@cdktf/hcl2json`.
+- Infra/CI: Terraform + GitHub Actions + ECR/EC2/SSM/CloudFront.
 
-## Required secrets
+## Develop locally
+```bash
+npm install          # installs workspace deps
+npm run build        # builds api and ui
+# or in dev:
+npm --prefix api run dev    # http://localhost:4000
+npm --prefix ui run dev     # http://localhost:3000
+```
+Env to set for the UI (e.g. `.env.local`):
+```
+NEXTAUTH_URL=http://localhost:3000
+NEXT_PUBLIC_API_BASE=http://localhost:4000
+NEXT_PUBLIC_ICON_BASE=https://your-bucket.s3.amazonaws.com
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+NEXTAUTH_SECRET=...
+```
 
-- `AWS_ROLE_ARN`, `AWS_REGION=us-east-1`
-- TF state: `TF_STATE_BUCKET`, `TF_STATE_KEY`, `TF_STATE_LOCK_TABLE`
-- TLS/aliases: `TF_VAR_acm_certificate_arn`, `CLOUDFRONT_DOMAIN_NAMES`
-- App env: `NEXTAUTH_URL`, `NEXT_PUBLIC_API_BASE`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`
-
-## If deploy stalls
-
-- Check SSM: cancel stuck command, `sudo systemctl restart amazon-ssm-agent` on the box, or just reboot (user data will restart containers).
-- Check cloud-init: `/var/log/cloud-init-output.log`
-- Verify containers: `docker ps` (via SSM or SSH/Session Manager)
+## Deploying
+See `docs/DEPLOYMENT.md` for workflows, secrets, and troubleshooting.
