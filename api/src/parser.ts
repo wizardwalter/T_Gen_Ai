@@ -64,6 +64,7 @@ const serviceMap: Record<string, string> = {
   // Messaging / events
   aws_sqs_queue: "sqs",
   aws_sns_topic: "sns",
+  aws_sns_topic_subscription: "sns",
   aws_cloudwatch_event_bus: "eventbridge",
   aws_cloudwatch_event_rule: "eventbridge",
   aws_cloudwatch_event_target: "eventbridge",
@@ -81,8 +82,6 @@ const serviceMap: Record<string, string> = {
   // Observability
   aws_cloudwatch_log_group: "observability",
   aws_cloudwatch_metric_alarm: "observability",
-  aws_sns_topic: "sns",
-  aws_sns_topic_subscription: "sns",
 };
 
 type TfInputFile = { name: string; content: string };
