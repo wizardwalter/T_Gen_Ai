@@ -1,6 +1,5 @@
 import type { Graph, GraphEdge, GraphNode } from "./types";
 
-type HclJson = Record<string, any>;
 type ResourceDef = {
   type: string;
   name: string;
@@ -46,9 +45,13 @@ const serviceMap: Record<string, string> = {
   aws_api_gateway_rest_api: "apigw",
   aws_api_gateway_stage: "apigw",
   aws_api_gateway_integration: "apigw",
+  aws_cloudfront_origin_access_control: "cloudfront",
 
   // Data / storage
   aws_s3_bucket: "s3",
+  aws_s3_bucket_policy: "s3",
+  aws_s3_bucket_ownership_controls: "s3",
+  aws_s3_bucket_public_access_block: "s3",
   aws_efs_file_system: "efs",
   aws_efs_mount_target: "efs",
   aws_db_instance: "rds",
@@ -72,24 +75,15 @@ const serviceMap: Record<string, string> = {
   aws_kms_key: "kms",
   aws_secretsmanager_secret: "secrets",
   aws_ssm_parameter: "ssm",
+  aws_iam_role_policy_attachment: "iam",
+  aws_lambda_permission: "lambda",
 
   // Observability
   aws_cloudwatch_log_group: "observability",
   aws_cloudwatch_metric_alarm: "observability",
+  aws_sns_topic: "sns",
+  aws_sns_topic_subscription: "sns",
 };
-
-const hcl2json = (() => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require("@cdktf/hcl2json");
-  } catch (err) {
-    return null;
-  }
-})();
-
-// Read the flag at runtime to honor env loaded before use.
-// Opt-in to hcl2json for richer parsing by setting USE_HCL2JSON=true.
-const useHcl2 = () => process.env.USE_HCL2JSON === "true";
 
 type TfInputFile = { name: string; content: string };
 
@@ -97,27 +91,14 @@ export function parseTerraformToGraph(files: TfInputFile[]): { graph: Graph; sum
   try {
     const allResources: ResourceDef[] = [];
     const errors: string[] = [];
-    const enableHcl = useHcl2() && hcl2json;
 
     for (const file of files) {
       let resources: ResourceDef[] = [];
 
-      if (enableHcl) {
-        try {
-          const parsed: HclJson = hcl2json.parse(file.content);
-          resources = collectResources(parsed);
-        } catch (err) {
-          errors.push(`${file.name}: ${(err as Error).message}`);
-        }
-      }
-
-      // Fallback to regex parsing if hcl2json is disabled or failed for this file.
-      if (!resources.length) {
-        try {
-          resources = collectResourcesFromRegex(file.content);
-        } catch (err) {
-          errors.push(`${file.name}: ${(err as Error).message}`);
-        }
+      try {
+        resources = collectResourcesFromRegex(file.content);
+      } catch (err) {
+        errors.push(`${file.name}: ${(err as Error).message}`);
       }
 
       if (resources.length) {
@@ -142,9 +123,9 @@ export function parseTerraformToGraph(files: TfInputFile[]): { graph: Graph; sum
     // Debug log for visibility in dev/test
     // eslint-disable-next-line no-console
     console.log(
-      `[parser] resources=${allResources.length} edges=${edges.length} enableHcl=${Boolean(
-        enableHcl
-      )}${errors.length ? ` errors=${errors.length}` : ""}`
+      `[parser] resources=${allResources.length} edges=${edges.length} parser=regex-only${
+        errors.length ? ` errors=${errors.length}` : ""
+      }`
     );
 
     return {
@@ -236,20 +217,6 @@ function extractMetadata(block: string): Record<string, unknown> {
   pickString("target");
 
   return meta;
-}
-
-function collectResources(parsed: HclJson): ResourceDef[] {
-  const items: ResourceDef[] = [];
-  const resourceBlock = parsed.resource as Record<string, any> | undefined;
-  if (!resourceBlock) return items;
-
-  for (const [type, entries] of Object.entries(resourceBlock)) {
-    for (const [name, body] of Object.entries(entries as Record<string, any>)) {
-      items.push({ type, name, body: body as Record<string, any> });
-    }
-  }
-
-  return items;
 }
 
 function toGraphNode(res: ResourceDef): GraphNode {
