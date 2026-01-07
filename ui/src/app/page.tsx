@@ -36,8 +36,8 @@ export default function Home() {
             <Image
               src="/tgenai_logo.png"
               alt="DevOps AI logo"
-              width={48}
-              height={48}
+              width={60}
+              height={60}
               className="drop-shadow-[0_0_35px_rgba(125,211,252,0.35)]"
               priority
             />

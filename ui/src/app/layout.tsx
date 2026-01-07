@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Upload Terraform, parse it, and see a clean three-tier diagram in seconds.",
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/favicon.png", type: "image/png", sizes: "512x512" },
       { url: "/favicon.png", type: "image/png", sizes: "192x192" },
       { url: "/favicon.png", type: "image/png", sizes: "32x32" },
