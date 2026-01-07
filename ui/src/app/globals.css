@@ -3,18 +3,37 @@
 :root {
   --background: #050a18;
   --panel: #0f172a;
+  --panel-soft: #0b1220;
   --foreground: #e2e8f0;
   --muted: #94a3b8;
+  --border: #1e293b;
   --accent: #7dd3fc;
   --accent-strong: #a855f7;
   --glow: rgba(125, 211, 252, 0.12);
+  --page-gradient: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.2), transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.18), transparent 30%),
+    linear-gradient(135deg, #060b1c, #0b1228 35%, #050a18);
+  --hero-title: #e2e8f0;
+  --hero-sub: #cbd5e1;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root[data-theme="light"] {
+  --background: #f8fafc;
+  --panel: #ffffff;
+  --panel-soft: #f1f5f9;
+  --foreground: #0f172a;
+  --muted: #475569;
+  --border: #e2e8f0;
+  --accent: #0ea5e9;
+  --accent-strong: #a855f7;
+  --glow: rgba(14, 165, 233, 0.12);
+  --page-gradient: radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.08), transparent 28%),
+    radial-gradient(circle at 80% 0%, rgba(168, 85, 247, 0.08), transparent 32%),
+    linear-gradient(135deg, #f8fafc, #eef2ff 40%, #f8fafc);
+  --hero-title: #0f172a;
+  --hero-sub: #334155;
+  color-scheme: light;
 }
 
 * {
@@ -23,9 +42,7 @@
 
 body {
   min-height: 100vh;
-  background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.2), transparent 25%),
-    radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.18), transparent 30%),
-    linear-gradient(135deg, #060b1c, #0b1228 35%, #050a18);
+  background: var(--page-gradient);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   text-rendering: optimizeLegibility;
@@ -39,6 +56,51 @@ a {
   background: rgba(168, 85, 247, 0.28);
   color: #f8fafc;
 }
+
+.theme-surface {
+  background: var(--panel);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.theme-surface-soft {
+  background: var(--panel-soft);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.theme-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.theme-muted {
+  color: var(--muted);
+}
+
+.hero-title {
+  color: var(--hero-title);
+}
+
+.hero-sub {
+  color: var(--hero-sub);
+}
+
+/* Light-mode overrides for existing slate utility classes */
+:root[data-theme="light"] .bg-slate-950 { background-color: #f8fafc !important; }
+:root[data-theme="light"] .bg-slate-950\/70 { background-color: rgba(248, 250, 252, 0.75) !important; }
+:root[data-theme="light"] .bg-slate-900 { background-color: #f1f5f9 !important; }
+:root[data-theme="light"] .bg-slate-900\/70 { background-color: rgba(241, 245, 249, 0.75) !important; }
+:root[data-theme="light"] .bg-slate-800 { background-color: #e2e8f0 !important; }
+:root[data-theme="light"] .bg-slate-800\/70 { background-color: rgba(226, 232, 240, 0.75) !important; }
+:root[data-theme="light"] .bg-slate-950\/60 { background-color: rgba(248, 250, 252, 0.6) !important; }
+:root[data-theme="light"] .border-slate-800 { border-color: #e2e8f0 !important; }
+:root[data-theme="light"] .border-slate-700 { border-color: #cbd5e1 !important; }
+:root[data-theme="light"] .text-slate-100,
+:root[data-theme="light"] .text-slate-200 { color: #0f172a !important; }
+:root[data-theme="light"] .text-slate-300,
+:root[data-theme="light"] .text-slate-400 { color: #475569 !important; }
 
 @keyframes floatY {
   0% { transform: translateY(0); }

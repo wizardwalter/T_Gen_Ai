@@ -96,15 +96,18 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
   const icon = serviceIcons[data.service] ?? serviceIcons.generic;
   return (
     <div
-      className="flex items-center gap-3 rounded-xl border bg-slate-900/90 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
-      style={{ borderColor: color }}
+      className="flex items-center gap-3 rounded-xl border bg-white px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.08)] dark:bg-slate-900"
+      style={{ borderColor: `${color}55` }}
     >
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/70">
-        <img src={icon} alt={data.label} className="h-7 w-7" />
+      <div
+        className="flex h-10 w-10 items-center justify-center rounded-lg border"
+        style={{ backgroundColor: `${color}15`, borderColor: `${color}55` }}
+      >
+        <img src={icon} alt={data.label} className="h-7 w-7 opacity-90" />
       </div>
-      <div className="text-xs text-slate-100">
+      <div className="text-xs text-slate-800 dark:text-slate-100">
         <div className="font-semibold leading-tight">{data.label}</div>
-        <div className="text-[11px] uppercase tracking-[0.15em] text-slate-400">
+        <div className="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">
           {data.service}
         </div>
       </div>
@@ -113,7 +116,7 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
 };
 
 const GroupNode = ({ data }: { data: { label: string } }) => (
-  <div className="h-full w-full rounded-2xl border border-sky-500/30 bg-sky-500/5 p-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+  <div className="h-full w-full rounded-2xl border border-dashed border-sky-300 bg-sky-50/70 p-2 text-[11px] uppercase tracking-[0.2em] text-slate-600 dark:border-sky-500/50 dark:bg-sky-500/10 dark:text-slate-200">
     <div className="flex items-center gap-2">
       <img src={serviceIcons.vpc} alt="VPC" className="h-4 w-4" />
       <span>{data.label}</span>
@@ -355,25 +358,26 @@ export default function UploadPage() {
               source: from.id,
               target: to.id,
               label: "flows_to",
-              style: { stroke: "#38bdf8", strokeWidth: 1.3 },
-              labelBgStyle: { fill: "#0f172a", fillOpacity: 0.85, color: "#e2e8f0" },
+              style: { stroke: "#0f172a", strokeWidth: 1.3 },
+              labelBgStyle: { fill: "#fff", fillOpacity: 0.95, color: "#0f172a" },
               animated: true,
-              markerEnd: { type: MarkerType.ArrowClosed, color: "#38bdf8" },
+              markerEnd: { type: MarkerType.ArrowClosed, color: "#0f172a" },
             });
           }
         }
       }
     }
 
+    const edgeStroke = "#0f172a";
     const edges = [...layoutEdges, ...fallbackEdges].map((e: any, idx: number) => ({
       id: e.id ?? `edge-${idx}-${e.from ?? e.source}-${e.to ?? e.target}`,
       source: e.from ?? e.source,
       target: e.to ?? e.target,
       label: e.relation ?? e.label,
-      style: e.style ?? { stroke: "#64748b" },
-      labelBgStyle: e.labelBgStyle ?? { fill: "#0f172a", fillOpacity: 0.8, color: "#cbd5e1" },
+      style: e.style ?? { stroke: edgeStroke, strokeWidth: 1.3 },
+      labelBgStyle: e.labelBgStyle ?? { fill: "#fff", fillOpacity: 0.95, color: edgeStroke },
       animated: true,
-      markerEnd: e.markerEnd ?? { type: MarkerType.ArrowClosed, color: "#64748b" },
+      markerEnd: e.markerEnd ?? { type: MarkerType.ArrowClosed, color: edgeStroke },
     }));
 
     return { nodes: [...groupNodes, ...positionedNodes], edges, rawNodes: displayNodes, rawEdges, legendNodes };
@@ -402,11 +406,11 @@ export default function UploadPage() {
           </Link>
         </div>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 shadow-[0_30px_90px_rgba(0,0,0,0.5)] backdrop-blur">
+        <div className="rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/70">
           {session ? (
             <>
               <div className="flex flex-col gap-3">
-                <p className="text-sm text-slate-200">
+                <p className="text-sm text-slate-700 dark:text-slate-200">
                   Signed in as{" "}
                   <span className="font-semibold">
                     {session.user?.email || session.user?.name}
@@ -414,15 +418,15 @@ export default function UploadPage() {
                 </p>
                 <label
                   htmlFor="folder-input"
-                  className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 px-6 py-10 text-center transition hover:border-slate-500"
+                  className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center shadow-[0_20px_60px_rgba(15,23,42,0.12)] transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-950/70"
                 >
-                  <div className="rounded-full bg-sky-400/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-sky-200">
+                  <div className="rounded-full bg-sky-100 px-3 py-1 text-xs uppercase tracking-[0.25em] text-sky-700 dark:bg-sky-400/10 dark:text-sky-200">
                     Upload folder
                   </div>
-                  <p className="text-lg font-semibold text-slate-50">
+                  <p className="text-lg font-semibold text-slate-800 dark:text-slate-50">
                     Drop a Terraform folder or click to browse
                   </p>
-                  <p className="max-w-md text-sm text-slate-400">
+                  <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
                     We’ll read HCL, detect resources, and send a parsed graph to the backend.
                   </p>
                   <input
@@ -448,28 +452,28 @@ export default function UploadPage() {
                     }}
                   />
                   {folderName && (
-                    <div className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-100">
+                    <div className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
                       Selected: {folderName}
                     </div>
                   )}
                 </label>
               </div>
-              <div className="mt-6 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+              <div className="mt-6 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                     What we parse
                   </p>
                   <p className="mt-1">Modules, providers, resources, outputs.</p>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                     Destination
                   </p>
                   <p className="mt-1">Backend API for diagram synthesis.</p>
                 </div>
               </div>
               {uploading && (
-                <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-200">
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
                   Uploading and parsing… (this may take a few seconds)
                 </div>
               )}
@@ -480,8 +484,8 @@ export default function UploadPage() {
               )}
               {result && (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-200">
-                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                       Parse summary
                     </p>
                     <p>{result.summary}</p>
@@ -492,36 +496,38 @@ export default function UploadPage() {
                       Files: {result.files.map((f) => f.name).join(", ")}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
                         Diagram view
                       </p>
-                      <p className="text-slate-300">Toggle infra overlays like Route53/CloudFront/observability.</p>
+                      <p className="text-slate-600">Toggle infra overlays like Route53/CloudFront/observability.</p>
                     </div>
                     <label className="inline-flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={showInfra}
                         onChange={(e) => setShowInfra(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-sky-400 focus:ring-sky-500"
+                        className="h-4 w-4 rounded border-slate-300 bg-white text-sky-500 focus:ring-sky-500"
                       />
                       <span>Show infra details</span>
                     </label>
                   </div>
-                  <div className="h-[520px] rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
+                  <div className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
                     {flow.nodes.length ? (
                       <ReactFlow
                         nodes={flow.nodes}
                         edges={flow.edges}
                         nodeTypes={nodeTypes}
+                        style={{ background: "transparent" }}
                         fitView
                         fitViewOptions={{ padding: 0.2 }}
-                        defaultEdgeOptions={{ animated: true }}
+                        defaultEdgeOptions={{ animated: true, style: { stroke: "#0f172a" } }}
                         onNodeClick={handleNodeClick}
+                        proOptions={{ hideAttribution: true }}
                       >
-                        <Background gap={18} size={1} color="#1e293b" />
-                        <Controls />
+                        <Background gap={18} size={1} color="#e2e8f0" />
+                        <Controls className="bg-white/90 text-slate-700 shadow-sm dark:bg-slate-900/90 dark:text-slate-100" />
                       </ReactFlow>
                     ) : (
                       <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -556,10 +562,10 @@ export default function UploadPage() {
                               />
                             </span>
                             <span className="flex min-w-0 flex-1 flex-col text-slate-100">
-                              <span className="block break-all whitespace-normal font-semibold leading-snug">
+                              <span className="block whitespace-normal break-words font-semibold leading-snug">
                                 {n.label}
                               </span>
-                              <span className="block break-all whitespace-normal text-xs uppercase tracking-[0.15em] text-slate-400">
+                              <span className="block whitespace-normal break-words text-xs uppercase tracking-[0.15em] text-slate-400">
                                 {n.service}
                               </span>
                             </span>
@@ -590,11 +596,11 @@ export default function UploadPage() {
                                 className="h-5 w-5 opacity-80"
                               />
                             </span>
-                            <span className="flex min-w-0 flex-1 flex-col text-slate-200">
-                              <span className="block break-all whitespace-normal font-semibold leading-snug">
+                              <span className="flex min-w-0 flex-1 flex-col text-slate-200">
+                              <span className="block whitespace-normal break-words font-semibold leading-snug">
                                 {n.label}
                               </span>
-                              <span className="block break-all whitespace-normal text-[11px] uppercase tracking-[0.12em] text-slate-500">
+                              <span className="block whitespace-normal break-words text-[11px] uppercase tracking-[0.12em] text-slate-500">
                                 {n.service}
                               </span>
                             </span>
@@ -635,16 +641,16 @@ export default function UploadPage() {
           )}
         </div>
         {selectedNodeId && result && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-200">
+          <div className="mt-10 w-full rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Selection</p>
-                <p className="text-base font-semibold text-slate-50">
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Selection</p>
+                <p className="text-base font-semibold text-slate-900 dark:text-slate-50">
                   {flow.rawNodes.find((n: any) => n.id === selectedNodeId)?.label ?? selectedNodeId}
                 </p>
               </div>
               <button
-                className="text-xs text-slate-400 hover:text-slate-200"
+                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 onClick={() => setSelectedNodeId(null)}
               >
                 Clear
@@ -652,8 +658,8 @@ export default function UploadPage() {
             </div>
             <div className="mt-3 grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Metadata</p>
-                <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-slate-950/70 p-3 text-xs text-slate-300">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Metadata</p>
+                <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-slate-100 p-3 text-xs text-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
 {JSON.stringify(
   result.graph.nodes.find((n) => n.id === selectedNodeId)?.metadata ?? {},
   null,
@@ -662,8 +668,8 @@ export default function UploadPage() {
                 </pre>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Relations</p>
-                <div className="mt-1 space-y-1 text-xs text-slate-200">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Relations</p>
+                <div className="mt-1 space-y-1 text-xs text-slate-700 dark:text-slate-200">
                   {flow.rawEdges
                     .filter((e: any) => e.from === selectedNodeId || e.to === selectedNodeId)
                     .slice(0, 10)
