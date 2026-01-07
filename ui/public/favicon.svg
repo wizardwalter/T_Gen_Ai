@@ -1,6 +1,6 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="80" y1="60" x2="420" y2="452" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bg" x1="70" y1="60" x2="440" y2="452" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0EA5E9"/>
       <stop offset="1" stop-color="#7C3AED"/>
     </linearGradient>
@@ -12,7 +12,6 @@
     <rect x="36" y="36" width="440" height="440" rx="110" fill="url(#bg)"/>
     <rect x="36" y="36" width="440" height="440" rx="110" stroke="rgba(255,255,255,0.12)" stroke-width="8"/>
   </g>
-  <path d="M176 160h160c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-48v136c0 8.8-7.2 16-16 16h-32c-8.8 0-16-7.2-16-16V224h-48c-8.8 0-16-7.2-16-16v-32c0-8.8 7.2-16 16-16Z" fill="white"/>
-  <circle cx="340" cy="184" r="20" fill="#0EA5E9" stroke="white" stroke-width="6"/>
-  <path d="M338 164l6 10h-12l6-10Z" fill="white"/>
+  <rect x="56" y="56" width="400" height="400" rx="100" fill="rgba(0,0,0,0.08)"/>
+  <image href="/tgenai_logo.png" x="56" y="56" width="400" height="400" preserveAspectRatio="xMidYMid meet"/>
 </svg>

@@ -18,15 +18,13 @@ export const metadata: Metadata = {
   description: "Upload Terraform, parse it, and see a clean three-tier diagram in seconds.",
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "32x32" },
-      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
-      { url: "/favicon.png", type: "image/png", sizes: "192x192" },
-      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon.png", type: "image/png", sizes: "16x16" },
+      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "512x512" },
+      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "192x192" },
+      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "64x64" },
+      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "32x32" },
     ],
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    shortcut: "/tgenai_logo_favicon_ready.png",
+    apple: "/tgenai_logo_favicon_ready.png",
   },
 };
 
