@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
-import ReactFlow, { Background, Controls, MarkerType, type Node, type NodeMouseHandler } from "reactflow";
+import ReactFlow, {
+  Background,
+  Controls,
+  Handle,
+  MarkerType,
+  Position,
+  type Node,
+  type NodeMouseHandler,
+} from "reactflow";
 import "reactflow/dist/style.css";
 
 const rawApiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
@@ -95,17 +103,39 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
   const color = serviceColors[data.service] ?? serviceColors.generic;
   const icon = serviceIcons[data.service] ?? serviceIcons.generic;
   return (
-    <div
-      className="flex items-center gap-3 rounded-xl border bg-white px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.08)] dark:bg-slate-900"
-      style={{ borderColor: `${color}55` }}
-    >
-      <div
-        className="flex h-10 w-10 items-center justify-center rounded-lg border"
-        style={{ backgroundColor: `${color}15`, borderColor: `${color}55` }}
-      >
+    <div className="relative flex items-center gap-3 rounded-xl border bg-white px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.08)] dark:bg-slate-900" style={{ borderColor: `${color}55` }}>
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!h-2.5 !w-2.5 !bg-transparent !border-none"
+        style={{ boxShadow: `0 0 0 2px ${color}44` }}
+        isConnectable={false}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!h-2.5 !w-2.5 !bg-transparent !border-none"
+        style={{ boxShadow: `0 0 0 2px ${color}66` }}
+        isConnectable={false}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2.5 !w-2.5 !bg-transparent !border-none"
+        style={{ boxShadow: `0 0 0 2px ${color}33` }}
+        isConnectable={false}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-2.5 !w-2.5 !bg-transparent !border-none"
+        style={{ boxShadow: `0 0 0 2px ${color}44` }}
+        isConnectable={false}
+      />
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg border" style={{ backgroundColor: `${color}15`, borderColor: `${color}55` }}>
         <img src={icon} alt={data.label} className="h-7 w-7 opacity-90" />
       </div>
-      <div className="text-xs text-slate-800 dark:text-slate-100">
+      <div className="min-w-[180px] max-w-[260px] whitespace-normal break-words text-xs text-slate-800 dark:text-slate-100">
         <div className="font-semibold leading-tight">{data.label}</div>
         <div className="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">
           {data.service}
@@ -116,15 +146,65 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
 };
 
 const GroupNode = ({ data }: { data: { label: string } }) => (
-  <div className="h-full w-full rounded-2xl border border-dashed border-sky-300 bg-sky-50/70 p-2 text-[11px] uppercase tracking-[0.2em] text-slate-600 dark:border-sky-500/50 dark:bg-sky-500/10 dark:text-slate-200">
-    <div className="flex items-center gap-2">
+  <div className="pointer-events-none h-full w-full rounded-2xl border border-dashed border-sky-300 bg-transparent p-2 text-[11px] uppercase tracking-[0.2em] text-slate-600 dark:border-sky-500/50 dark:text-slate-200">
+    <div className="flex items-center gap-2 opacity-70">
       <img src={serviceIcons.vpc} alt="VPC" className="h-4 w-4" />
       <span>{data.label}</span>
     </div>
   </div>
 );
 
-const nodeTypes = { aws: AwsNode, group: GroupNode };
+const FrameNode = ({ data }: { data: { label: string } }) => (
+  <div className="pointer-events-none h-full w-full rounded-3xl border border-slate-300/70 bg-transparent p-3 text-[11px] uppercase tracking-[0.2em] text-slate-500 backdrop-blur-[1px] dark:border-slate-700/60 dark:text-slate-300">
+    <div className="flex items-center gap-2 opacity-70">
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-800/70 text-[10px] font-semibold text-white dark:bg-slate-700">
+        AWS
+      </span>
+      <span>{data.label}</span>
+    </div>
+  </div>
+);
+
+const UserNode = ({ data }: { data: { label: string } }) => (
+  <div className="relative flex items-center gap-3 rounded-xl border border-sky-300/70 bg-white px-3 py-2 shadow-[0_10px_28px_rgba(14,165,233,0.25)] dark:border-sky-500/60 dark:bg-slate-900">
+    <Handle
+      type="source"
+      position={Position.Right}
+      className="!h-2.5 !w-2.5 !bg-transparent !border-none"
+      style={{ boxShadow: "0 0 0 2px rgba(248,250,252,0.9)" }}
+      isConnectable={false}
+    />
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-xs font-bold uppercase text-white dark:bg-sky-400">
+      User
+    </div>
+    <div className="min-w-[120px] text-xs text-slate-800 dark:text-slate-100">
+      <div className="font-semibold leading-tight">{data.label}</div>
+      <div className="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">
+        Public entry
+      </div>
+    </div>
+  </div>
+);
+
+const nodeTypes = { aws: AwsNode, group: GroupNode, frame: FrameNode, user: UserNode };
+
+const flowEdgeStyle = { stroke: "#e2e8f0", strokeWidth: 2.2 };
+const flowLabelBg = { fill: "#0f172a", fillOpacity: 0.75, color: "#e2e8f0" };
+const flowLabelStyle = { fontSize: 10, fontWeight: 600, fill: "#e2e8f0" };
+const permissionEdgeStyle = { stroke: "#ef4444", strokeWidth: 2.4 };
+const permissionLabelBg = { fill: "#fef2f2", fillOpacity: 0.95, color: "#7f1d1d" };
+const permissionLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#7f1d1d" };
+const publicEdgeStyle = { stroke: "#f8fafc", strokeWidth: 2.6 };
+const publicLabelBg = { fill: "#0f172a", fillOpacity: 0.85, color: "#f8fafc" };
+const publicLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#f8fafc" };
+const permissionHints = ["permission", "policy", "role", "attach", "access", "pull", "push", "ecr", "iam"];
+const styleForRelation = (relation?: string) => {
+  const rel = (relation ?? "").toLowerCase();
+  if (permissionHints.some((h) => rel.includes(h))) {
+    return { ...permissionEdgeStyle, labelBgStyle: permissionLabelBg, labelStyle: permissionLabelStyle };
+  }
+  return { ...flowEdgeStyle, labelBgStyle: flowLabelBg, labelStyle: flowLabelStyle };
+};
 
 export default function UploadPage() {
   const { data: session } = useSession();
@@ -170,6 +250,13 @@ export default function UploadPage() {
 
   const flow = useMemo(() => {
     if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [], legendNodes: [] };
+
+    const laneSpacing = 320;
+    const rowSpacing = 150;
+    const baseNodeWidth = 280;
+    const baseNodeHeight = 96;
+    const groupPaddingX = 200;
+    const groupPaddingY = 160;
 
     // Lane ordering roughly matches the desired downstream story: CloudFront -> S3 -> API Gateway -> Lambda.
     const serviceLane: Record<string, number> = {
@@ -236,14 +323,21 @@ export default function UploadPage() {
     const displayNodes = rawNodesAll.filter((n) => primaryServices.has(n.service));
     const legendNodes = rawNodesAll.filter((n) => !primaryServices.has(n.service));
 
-    const edgeKey = (e: any) => `${e.from}|${e.to}|${e.relation ?? ""}`;
+    const endpoints = (e: any) => ({ from: e.from ?? e.source, to: e.to ?? e.target });
+    const edgeKey = (e: any) => {
+      const { from, to } = endpoints(e);
+      return `${from ?? ""}|${to ?? ""}|${e.relation ?? e.label ?? ""}`;
+    };
     const seenEdges = new Set<string>();
-    const rawEdgesAll = result.graph.edges.filter((e) => {
-      const k = edgeKey(e);
-      if (seenEdges.has(k)) return false;
-      seenEdges.add(k);
-      return true;
-    });
+    const rawEdgesAll = result.graph.edges
+      .map((e) => ({ ...e, ...endpoints(e) }))
+      .filter((e) => e.from && e.to)
+      .filter((e) => {
+        const k = edgeKey(e);
+        if (seenEdges.has(k)) return false;
+        seenEdges.add(k);
+        return true;
+      });
     const rawEdges = rawEdgesAll.filter((e) => {
       const fromVisible = displayNodes.some((n) => n.id === e.from);
       const toVisible = displayNodes.some((n) => n.id === e.to);
@@ -301,13 +395,52 @@ export default function UploadPage() {
         id: n.id ?? `node-${idx}`,
         type: "aws",
         data: { label: n.label ?? n.id ?? `Node ${idx}`, service: n.service ?? "generic" },
-        position: { x: lane * 230, y: order * 120 },
+        position: { x: lane * laneSpacing, y: order * rowSpacing },
       };
     });
 
     const idToPosition = new Map(positionedNodes.map((n) => [n.id, n.position]));
 
     const groupNodes: any[] = [];
+    const extraNodes: any[] = [];
+    const extraEdges: any[] = [];
+
+    const publicEntrypointServices = new Set<string>(["route53", "cloudfront", "apigw", "elb", "s3"]);
+    const publicEntrypointNodes = positionedNodes.filter((n) => publicEntrypointServices.has(n.data.service));
+    if (publicEntrypointNodes.length) {
+      const anchorLane = Math.min(
+        ...publicEntrypointNodes.map((n) => levels.get(n.id) ?? serviceLane[n.data.service] ?? 0)
+      );
+      const anchorX = anchorLane * laneSpacing;
+      const avgY =
+        publicEntrypointNodes.reduce((sum, n) => sum + (n.position?.y ?? 0), 0) /
+        publicEntrypointNodes.length;
+      const userNodeY = avgY - baseNodeHeight * 0.2;
+
+      extraNodes.push({
+        id: "public-users",
+        type: "user",
+        data: { label: "Users" },
+        position: { x: anchorX - laneSpacing * 1.1, y: userNodeY },
+        selectable: false,
+        draggable: false,
+      });
+
+      for (const entry of publicEntrypointNodes) {
+        extraEdges.push({
+          id: `public-users-${entry.id}`,
+          source: "public-users",
+          target: entry.id,
+          label: "public access",
+          style: publicEdgeStyle,
+          labelBgStyle: publicLabelBg,
+          labelStyle: publicLabelStyle,
+          animated: true,
+          markerEnd: { type: MarkerType.ArrowClosed, color: publicEdgeStyle.stroke },
+        });
+      }
+    }
+
     for (const [vpcId, members] of vpcMembership.entries()) {
       const memberPositions = members
         .map((id) => idToPosition.get(id))
@@ -317,18 +450,41 @@ export default function UploadPage() {
       const maxX = Math.max(...memberPositions.map((p) => p.x));
       const minY = Math.min(...memberPositions.map((p) => p.y));
       const maxY = Math.max(...memberPositions.map((p) => p.y));
-      const width = maxX - minX + 260;
-      const height = maxY - minY + 180;
+      const width = maxX - minX + baseNodeWidth + groupPaddingX;
+      const height = maxY - minY + baseNodeHeight + groupPaddingY;
       const vpcNode = nodeById.get(vpcId);
       groupNodes.push({
         id: `${vpcId}-group`,
         type: "group",
         data: { label: vpcNode?.label ?? "VPC" },
-        position: { x: minX - 120, y: minY - 80 },
+        position: { x: minX - groupPaddingX / 2, y: minY - groupPaddingY / 2 },
         style: { width, height },
         selectable: false,
         draggable: false,
         zIndex: 0,
+      });
+    }
+
+    const infraPositions = positionedNodes.map((n) => n.position);
+    if (infraPositions.length) {
+      const minX = Math.min(...infraPositions.map((p) => p.x));
+      const maxX = Math.max(...infraPositions.map((p) => p.x));
+      const minY = Math.min(...infraPositions.map((p) => p.y));
+      const maxY = Math.max(...infraPositions.map((p) => p.y));
+      const cloudPaddingX = 200;
+      const cloudPaddingY = 180;
+      groupNodes.unshift({
+        id: "aws-cloud-frame",
+        type: "frame",
+        data: { label: "AWS Cloud" },
+        position: { x: minX - cloudPaddingX, y: minY - cloudPaddingY },
+        style: {
+          width: maxX - minX + baseNodeWidth + cloudPaddingX * 2,
+          height: maxY - minY + baseNodeHeight + cloudPaddingY * 2,
+        },
+        selectable: false,
+        draggable: false,
+        zIndex: -5,
       });
     }
 
@@ -358,29 +514,37 @@ export default function UploadPage() {
               source: from.id,
               target: to.id,
               label: "flows_to",
-              style: { stroke: "#0f172a", strokeWidth: 1.3 },
-              labelBgStyle: { fill: "#fff", fillOpacity: 0.95, color: "#0f172a" },
+              style: flowEdgeStyle,
+              labelBgStyle: flowLabelBg,
+              labelStyle: flowLabelStyle,
               animated: true,
-              markerEnd: { type: MarkerType.ArrowClosed, color: "#0f172a" },
+              markerEnd: { type: MarkerType.ArrowClosed, color: flowEdgeStyle.stroke },
             });
           }
         }
       }
     }
 
-    const edgeStroke = "#0f172a";
-    const edges = [...layoutEdges, ...fallbackEdges].map((e: any, idx: number) => ({
-      id: e.id ?? `edge-${idx}-${e.from ?? e.source}-${e.to ?? e.target}`,
-      source: e.from ?? e.source,
-      target: e.to ?? e.target,
-      label: e.relation ?? e.label,
-      style: e.style ?? { stroke: edgeStroke, strokeWidth: 1.3 },
-      labelBgStyle: e.labelBgStyle ?? { fill: "#fff", fillOpacity: 0.95, color: edgeStroke },
-      animated: true,
-      markerEnd: e.markerEnd ?? { type: MarkerType.ArrowClosed, color: edgeStroke },
-    }));
+    const edges = [...layoutEdges, ...fallbackEdges].map((e: any, idx: number) => {
+      const relationStyle = styleForRelation(e.relation ?? e.label);
+      return {
+        id: e.id ?? `edge-${idx}-${e.from ?? e.source}-${e.to ?? e.target}`,
+        source: e.from ?? e.source,
+        target: e.to ?? e.target,
+        label: e.relation ?? e.label,
+        type: e.type ?? "smoothstep",
+        style: e.style ?? { stroke: relationStyle.stroke, strokeWidth: relationStyle.strokeWidth },
+        labelBgStyle: e.labelBgStyle ?? relationStyle.labelBgStyle,
+        labelStyle: e.labelStyle ?? relationStyle.labelStyle,
+        animated: true,
+        markerEnd: e.markerEnd ?? { type: MarkerType.ArrowClosed, color: relationStyle.stroke },
+      };
+    });
 
-    return { nodes: [...groupNodes, ...positionedNodes], edges, rawNodes: displayNodes, rawEdges, legendNodes };
+    const fullEdges = [...edges, ...extraEdges];
+    const allNodes = [...groupNodes, ...positionedNodes, ...extraNodes];
+
+    return { nodes: allNodes, edges: fullEdges, rawNodes: displayNodes, rawEdges, legendNodes };
   }, [result, showInfra]);
 
   return (
@@ -513,21 +677,28 @@ export default function UploadPage() {
                       <span>Show infra details</span>
                     </label>
                   </div>
-                  <div className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-                    {flow.nodes.length ? (
-                      <ReactFlow
-                        nodes={flow.nodes}
-                        edges={flow.edges}
-                        nodeTypes={nodeTypes}
-                        style={{ background: "transparent" }}
-                        fitView
-                        fitViewOptions={{ padding: 0.2 }}
-                        defaultEdgeOptions={{ animated: true, style: { stroke: "#0f172a" } }}
-                        onNodeClick={handleNodeClick}
-                        proOptions={{ hideAttribution: true }}
-                      >
-                        <Background gap={18} size={1} color="#e2e8f0" />
-                        <Controls className="bg-white/90 text-slate-700 shadow-sm dark:bg-slate-900/90 dark:text-slate-100" />
+                <div className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+                  {flow.nodes.length ? (
+                    <ReactFlow
+                      nodes={flow.nodes}
+                      edges={flow.edges}
+                      nodeTypes={nodeTypes}
+                      style={{ background: "transparent" }}
+                      fitView
+                      fitViewOptions={{ padding: 0.2 }}
+                      defaultEdgeOptions={{
+                        animated: true,
+                        type: "smoothstep",
+                        style: flowEdgeStyle,
+                        labelBgStyle: flowLabelBg,
+                        labelStyle: flowLabelStyle,
+                        markerEnd: { type: MarkerType.ArrowClosed, color: flowEdgeStyle.stroke },
+                      }}
+                      onNodeClick={handleNodeClick}
+                      proOptions={{ hideAttribution: true }}
+                    >
+                      <Background gap={18} size={1} color="#e2e8f0" />
+                      <Controls className="bg-white/90 text-slate-700 shadow-sm dark:bg-slate-900/90 dark:text-slate-100" />
                       </ReactFlow>
                     ) : (
                       <div className="flex h-full items-center justify-center text-sm text-slate-400">
