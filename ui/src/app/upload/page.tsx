@@ -137,7 +137,7 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
       </div>
       <div className="min-w-[180px] max-w-[260px] whitespace-normal break-words text-xs text-slate-800 dark:text-slate-100">
         <div className="font-semibold leading-tight">{data.label}</div>
-        <div className="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">
+        <div className="text-[11px] uppercase tracking-[0.15em] text-slate-200 dark:text-slate-500 dark:text-slate-300">
           {data.service}
         </div>
       </div>
@@ -155,7 +155,7 @@ const GroupNode = ({ data }: { data: { label: string } }) => (
 );
 
 const FrameNode = ({ data }: { data: { label: string } }) => (
-  <div className="pointer-events-none h-full w-full rounded-3xl border border-slate-300/70 bg-transparent p-3 text-[11px] uppercase tracking-[0.2em] text-slate-500 backdrop-blur-[1px] dark:border-slate-700/60 dark:text-slate-300">
+  <div className="pointer-events-none h-full w-full rounded-3xl border border-slate-300/70 bg-transparent p-3 text-[11px] uppercase tracking-[0.2em] text-slate-200 dark:text-slate-500 backdrop-blur-[1px] dark:border-slate-700/60 dark:text-slate-300">
     <div className="flex items-center gap-2 opacity-70">
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-800/70 text-[10px] font-semibold text-white dark:bg-slate-700">
         AWS
@@ -179,7 +179,7 @@ const UserNode = ({ data }: { data: { label: string } }) => (
     </div>
     <div className="min-w-[120px] text-xs text-slate-800 dark:text-slate-100">
       <div className="font-semibold leading-tight">{data.label}</div>
-      <div className="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300">
+      <div className="text-[11px] uppercase tracking-[0.15em] text-slate-200 dark:text-slate-500 dark:text-slate-300">
         Public entry
       </div>
     </div>
@@ -566,7 +566,7 @@ export default function UploadPage() {
             href="/"
             className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 hover:border-slate-500"
           >
-            ← Back
+            Back
           </Link>
         </div>
 
@@ -591,7 +591,7 @@ export default function UploadPage() {
                     Drop a Terraform folder or click to browse
                   </p>
                   <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                    We’ll read HCL, detect resources, and send a parsed graph to the backend.
+                    We'll read HCL, detect resources, and send a parsed graph to the backend.
                   </p>
                   <input
                     id="folder-input"
@@ -654,7 +654,7 @@ export default function UploadPage() {
                     </p>
                     <p>{result.summary}</p>
                     <p>
-                      Nodes: {result.graph.nodes.length} · Edges: {result.graph.edges.length}
+                      Nodes: {result.graph.nodes.length} / Edges: {result.graph.edges.length}
                     </p>
                     <div className="text-xs text-slate-400">
                       Files: {result.files.map((f) => f.name).join(", ")}
@@ -701,7 +701,7 @@ export default function UploadPage() {
                       <Controls className="bg-white/90 text-slate-700 shadow-sm dark:bg-slate-900/90 dark:text-slate-100" />
                       </ReactFlow>
                     ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                      <div className="flex h-full items-center justify-center text-sm text-slate-600 dark:text-slate-400">
                         No diagram to show yet.
                       </div>
                     )}
@@ -743,7 +743,7 @@ export default function UploadPage() {
                           </button>
                         ))}
                         {flow.rawNodes.length === 0 && (
-                          <div className="text-sm text-slate-400">No resources to list yet.</div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400">No resources to list yet.</div>
                         )}
                       </div>
                     </div>
@@ -771,14 +771,14 @@ export default function UploadPage() {
                               <span className="block whitespace-normal break-words font-semibold leading-snug">
                                 {n.label}
                               </span>
-                              <span className="block whitespace-normal break-words text-[11px] uppercase tracking-[0.12em] text-slate-500">
+                              <span className="block whitespace-normal break-words text-[11px] uppercase tracking-[0.12em] text-slate-200 dark:text-slate-500">
                                 {n.service}
                               </span>
                             </span>
                           </div>
                         ))}
                         {flow.legendNodes.length === 0 && (
-                          <div className="text-sm text-slate-400">No hidden resources detected.</div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400">No hidden resources detected.</div>
                         )}
                       </div>
                     </div>
@@ -788,10 +788,10 @@ export default function UploadPage() {
             </>
           ) : (
             <div className="flex flex-col items-center gap-4 text-center">
-              <p className="text-lg font-semibold text-slate-50">
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
                 Sign in to start uploading Terraform.
               </p>
-              <p className="max-w-md text-sm text-slate-400">
+              <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
                 Use Google SSO to keep things simple—no passwords, no extra steps.
               </p>
               <div className="flex gap-3">
@@ -803,7 +803,7 @@ export default function UploadPage() {
                 </Link>
                 <Link
                   href="/"
-                  className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 hover:border-slate-500"
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition hover:border-slate-400 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
                   Back home
                 </Link>
@@ -821,7 +821,7 @@ export default function UploadPage() {
                 </p>
               </div>
               <button
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                className="text-xs text-slate-200 dark:text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 onClick={() => setSelectedNodeId(null)}
               >
                 Clear
@@ -847,12 +847,12 @@ export default function UploadPage() {
                     .map((e: any, idx: number) => (
                       <div key={`${e.id}-${idx}`} className="rounded-md bg-slate-950/70 px-3 py-2">
                         <span className="text-sky-300">{e.from}</span>
-                        <span className="text-slate-500"> — {e.relation} → </span>
+                        <span className="text-slate-500"> &rarr; {e.relation} &rarr; </span>
                         <span className="text-emerald-300">{e.to}</span>
                       </div>
                     ))}
                   {flow.rawEdges.filter((e: any) => e.from === selectedNodeId || e.to === selectedNodeId).length === 0 && (
-                    <div className="text-slate-500">No relations recorded.</div>
+                    <div className="text-slate-200 dark:text-slate-500">No relations recorded.</div>
                   )}
                 </div>
               </div>
@@ -863,3 +863,13 @@ export default function UploadPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
