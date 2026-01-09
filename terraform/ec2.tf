@@ -77,13 +77,17 @@ locals {
   app_user_data = <<-EOF
     #!/bin/bash
     set -e
+    # Log user-data for debugging
+    exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+
     yum update -y
+    yum install -y curl
     # Ensure SSM agent is installed and running so the instance registers with Systems Manager
     SSM_REGION="${data.aws_region.current.name}"
     SSM_RPM_URL="https://s3.${data.aws_region.current.name}.amazonaws.com/amazon-ssm-${data.aws_region.current.name}/latest/linux_amd64/amazon-ssm-agent.rpm"
     if ! rpm -q amazon-ssm-agent >/dev/null 2>&1; then
       curl -fSL "$SSM_RPM_URL" -o /tmp/amazon-ssm-agent.rpm
-      yum install -y /tmp/amazon-ssm-agent.rpm || rpm -Uvh /tmp/amazon-ssm-agent.rpm
+      dnf install -y /tmp/amazon-ssm-agent.rpm || yum install -y /tmp/amazon-ssm-agent.rpm || rpm -Uvh /tmp/amazon-ssm-agent.rpm
     fi
     systemctl enable amazon-ssm-agent
     systemctl start amazon-ssm-agent
