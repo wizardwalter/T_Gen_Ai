@@ -25,22 +25,30 @@ jobs:
 
       - name: Delete non-latest tags in aidevops-api
         run: |
+          set -euo pipefail
           REPO="aidevops-api"
-          TAGS=$(aws ecr list-images --repository-name "$REPO" --filter tagStatus=TAGGED --query 'imageIds[].imageTag' --output text --region $AWS_REGION | tr '\t' '\n')
-          for TAG in $TAGS; do
-            if [ "$TAG" != "latest" ]; then
-              echo "Deleting $REPO:$TAG"
-              aws ecr batch-delete-image --repository-name "$REPO" --image-ids imageTag="$TAG" --region $AWS_REGION
+          LATEST_DIGEST=$(aws ecr describe-images --repository-name "$REPO" --region "$AWS_REGION" --query "imageDetails[?contains(imageTags, 'latest')].imageDigest" --output text | head -n 1)
+          echo "Keeping $REPO digest tagged as latest: ${LATEST_DIGEST:-<none>}"
+          DIGESTS=$(aws ecr describe-images --repository-name "$REPO" --region "$AWS_REGION" --query 'imageDetails[].imageDigest' --output text | tr '\t' '\n' | sort -u)
+          for DIGEST in $DIGESTS; do
+            if [ -n "$LATEST_DIGEST" ] && [ "$DIGEST" = "$LATEST_DIGEST" ]; then
+              continue
             fi
+            echo "Deleting $REPO digest $DIGEST (all tags/untagged)"
+            aws ecr batch-delete-image --repository-name "$REPO" --region "$AWS_REGION" --image-ids imageDigest="$DIGEST"
           done
 
       - name: Delete non-latest tags in aidevops-ui
         run: |
+          set -euo pipefail
           REPO="aidevops-ui"
-          TAGS=$(aws ecr list-images --repository-name "$REPO" --filter tagStatus=TAGGED --query 'imageIds[].imageTag' --output text --region $AWS_REGION | tr '\t' '\n')
-          for TAG in $TAGS; do
-            if [ "$TAG" != "latest" ]; then
-              echo "Deleting $REPO:$TAG"
-              aws ecr batch-delete-image --repository-name "$REPO" --image-ids imageTag="$TAG" --region $AWS_REGION
+          LATEST_DIGEST=$(aws ecr describe-images --repository-name "$REPO" --region "$AWS_REGION" --query "imageDetails[?contains(imageTags, 'latest')].imageDigest" --output text | head -n 1)
+          echo "Keeping $REPO digest tagged as latest: ${LATEST_DIGEST:-<none>}"
+          DIGESTS=$(aws ecr describe-images --repository-name "$REPO" --region "$AWS_REGION" --query 'imageDetails[].imageDigest' --output text | tr '\t' '\n' | sort -u)
+          for DIGEST in $DIGESTS; do
+            if [ -n "$LATEST_DIGEST" ] && [ "$DIGEST" = "$LATEST_DIGEST" ]; then
+              continue
             fi
+            echo "Deleting $REPO digest $DIGEST (all tags/untagged)"
+            aws ecr batch-delete-image --repository-name "$REPO" --region "$AWS_REGION" --image-ids imageDigest="$DIGEST"
           done
