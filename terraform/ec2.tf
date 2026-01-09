@@ -79,7 +79,12 @@ locals {
     set -e
     yum update -y
     # Ensure SSM agent is installed and running so the instance registers with Systems Manager
-    (dnf install -y amazon-ssm-agent || yum install -y amazon-ssm-agent)
+    SSM_REGION="${data.aws_region.current.name}"
+    SSM_RPM_URL="https://s3.${data.aws_region.current.name}.amazonaws.com/amazon-ssm-${data.aws_region.current.name}/latest/linux_amd64/amazon-ssm-agent.rpm"
+    if ! rpm -q amazon-ssm-agent >/dev/null 2>&1; then
+      curl -fSL "$SSM_RPM_URL" -o /tmp/amazon-ssm-agent.rpm
+      yum install -y /tmp/amazon-ssm-agent.rpm || rpm -Uvh /tmp/amazon-ssm-agent.rpm
+    fi
     systemctl enable amazon-ssm-agent
     systemctl start amazon-ssm-agent
 
