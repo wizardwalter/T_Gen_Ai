@@ -40,7 +40,7 @@ resource "aws_cloudfront_distribution" "ui" {
   aliases     = var.cloudfront_domain_names
 
   origin {
-    domain_name = aws_eip.app_host.public_ip
+    domain_name = aws_instance.app_host.public_dns
     origin_id   = "ui-origin"
 
     custom_origin_config {
@@ -52,7 +52,7 @@ resource "aws_cloudfront_distribution" "ui" {
   }
 
   origin {
-    domain_name = aws_eip.app_host.public_ip
+    domain_name = aws_instance.app_host.public_dns
     origin_id   = "api-origin"
 
     custom_origin_config {
