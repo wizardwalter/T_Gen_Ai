@@ -258,55 +258,6 @@ export default function UploadPage() {
     const groupPaddingX = 200;
     const groupPaddingY = 160;
 
-    // Lane ordering roughly matches the desired downstream story: CloudFront -> S3 -> API Gateway -> Lambda.
-    const serviceLane: Record<string, number> = {
-      route53: 0,
-      cloudfront: 0,
-      s3: 1,
-      apigw: 2,
-      elb: 2,
-      ecs: 2,
-      ec2: 2,
-      eks: 2,
-      lambda: 3,
-      ecr: 3,
-      rds: 3,
-      dynamodb: 3,
-      elasticache: 3,
-      efs: 3,
-      sqs: 4,
-      sns: 4,
-      eventbridge: 4,
-      iam: 5,
-      kms: 5,
-      secrets: 5,
-      ssm: 5,
-      observability: 6,
-      generic: 2,
-    };
-
-    // Primary services stay on the canvas; everything else goes to the legend list.
-    const primaryServices = new Set<string>([
-      "route53",
-      "cloudfront",
-      "apigw",
-      "lambda",
-      "ecs",
-      "ec2",
-      "eks",
-      "ecr",
-      "s3",
-      "rds",
-      "dynamodb",
-      "elasticache",
-      "sqs",
-      "sns",
-      "eventbridge",
-      "iam",
-      "kms",
-      "secrets",
-    ]);
-
     const hiddenTypes = new Set<string>([
       "aws_ecs_task_definition",
       "aws_lb_target_group_attachment",
@@ -314,14 +265,17 @@ export default function UploadPage() {
       "aws_iam_policy",
     ]);
     const infraDetailServices = new Set<string>(["route53", "observability"]);
+    const supportiveServices = new Set<string>(["iam", "kms", "secrets", "ssm", "observability"]);
+    const publicServices = new Set<string>(["route53", "cloudfront", "apigw", "elb", "s3"]);
+    const publicRelationHints = ["public", "internet", "ingress", "internet-facing", "cdn"];
 
     const rawNodesAll = result.graph.nodes.filter((n) => {
       if (hiddenTypes.has(n.type)) return false;
       if (!showInfra && infraDetailServices.has(n.service)) return false;
       return true;
     });
-    const displayNodes = rawNodesAll.filter((n) => primaryServices.has(n.service));
-    const legendNodes = rawNodesAll.filter((n) => !primaryServices.has(n.service));
+    const displayNodes = rawNodesAll;
+    const legendNodes: any[] = [];
 
     const endpoints = (e: any) => ({ from: e.from ?? e.source, to: e.to ?? e.target });
     const edgeKey = (e: any) => {
@@ -355,40 +309,93 @@ export default function UploadPage() {
       }
     }
 
+    // Build adjacency and indegree for layout.
     const layoutEdges = rawEdges;
     const indegree = new Map<string, number>();
-    for (const n of displayNodes) indegree.set(n.id, 0);
+    const adjacency = new Map<string, string[]>();
+    for (const n of displayNodes) {
+      indegree.set(n.id, 0);
+      adjacency.set(n.id, []);
+    }
     for (const e of layoutEdges) {
-      if (indegree.has(e.to ?? e.target)) {
-        indegree.set(e.to ?? e.target, (indegree.get(e.to ?? e.target) ?? 0) + 1);
-      }
+      const from = e.from ?? e.source;
+      const to = e.to ?? e.target;
+      if (!indegree.has(from) || !indegree.has(to)) continue;
+      indegree.set(to, (indegree.get(to) ?? 0) + 1);
+      const list = adjacency.get(from) ?? [];
+      list.push(to);
+      adjacency.set(from, list);
     }
 
-    const queue = displayNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0);
+    // Entry point detection: zero indegree + public-ish services/relations get a higher score.
+    const entryScore = new Map<string, number>();
+    for (const n of displayNodes) {
+      entryScore.set(n.id, 0);
+      if ((indegree.get(n.id) ?? 0) === 0) entryScore.set(n.id, (entryScore.get(n.id) ?? 0) + 2);
+      if (publicServices.has(n.service)) entryScore.set(n.id, (entryScore.get(n.id) ?? 0) + 2);
+    }
+    for (const e of layoutEdges) {
+      const rel = (e.relation ?? e.label ?? "").toLowerCase();
+      if (publicRelationHints.some((h) => rel.includes(h))) {
+        entryScore.set(e.from, (entryScore.get(e.from) ?? 0) + 1);
+      }
+    }
+    const scoredEntries = [...displayNodes]
+      .map((n) => ({ id: n.id, score: entryScore.get(n.id) ?? 0 }))
+      .sort((a, b) => b.score - a.score);
+    const topScore = scoredEntries[0]?.score ?? 0;
+    const entryIds =
+      topScore > 0
+        ? scoredEntries.filter((e) => e.score === topScore).map((e) => e.id)
+        : displayNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0).map((n) => n.id);
+    const entrySet = new Set(entryIds.length ? entryIds : displayNodes.map((n) => n.id));
+
+    // Longest-path style leveling from entries, with cycle fallback.
     const levels = new Map<string, number>();
-    queue.forEach((n) => levels.set(n.id, serviceLane[n.service] ?? 2));
+    const indegreeCopy = new Map(indegree);
+    const queue = [...entrySet];
+    entrySet.forEach((id) => levels.set(id, 0));
 
     while (queue.length) {
-      const current = queue.shift();
-      if (!current) break;
-      const level = levels.get(current.id) ?? (serviceLane[current.service] ?? 2);
-      for (const e of layoutEdges.filter((edge) => (edge.from ?? edge.source) === current.id)) {
-        const targetId = e.to ?? e.target;
-        const targetNode = displayNodes.find((n) => n.id === targetId);
-        const nextLevel = Math.max(level + 1, serviceLane[targetNode?.service ?? "generic"] ?? 2);
+      const currentId = queue.shift();
+      const currentLevel = levels.get(currentId) ?? 0;
+      for (const targetId of adjacency.get(currentId) ?? []) {
+        const nextLevel = Math.max(currentLevel + 1, levels.get(targetId) ?? 0);
         if (!levels.has(targetId) || nextLevel > (levels.get(targetId) ?? 0)) {
           levels.set(targetId, nextLevel);
         }
-        if (indegree.has(targetId)) {
-          indegree.set(targetId, (indegree.get(targetId) ?? 1) - 1);
-          if ((indegree.get(targetId) ?? 0) <= 0 && targetNode) queue.push(targetNode);
+        indegreeCopy.set(targetId, (indegreeCopy.get(targetId) ?? 1) - 1);
+        if ((indegreeCopy.get(targetId) ?? 0) <= 0) {
+          queue.push(targetId);
         }
+      }
+    }
+    // Cycle fallback: any un-leveled nodes get placed near their neighbors.
+    for (const n of displayNodes) {
+      if (levels.has(n.id)) continue;
+      const neighborLevels: number[] = [];
+      for (const e of layoutEdges) {
+        if (e.from === n.id && levels.has(e.to)) neighborLevels.push(levels.get(e.to) ?? 0);
+        if (e.to === n.id && levels.has(e.from)) neighborLevels.push(levels.get(e.from) ?? 0);
+      }
+      levels.set(n.id, neighborLevels.length ? Math.max(...neighborLevels) : 0);
+    }
+    // Align supportive services (IAM/KMS/etc.) with the resources they touch.
+    for (const n of displayNodes) {
+      if (!supportiveServices.has(n.service)) continue;
+      const neighborLevels: number[] = [];
+      for (const e of layoutEdges) {
+        if (e.from === n.id && levels.has(e.to)) neighborLevels.push(levels.get(e.to) ?? 0);
+        if (e.to === n.id && levels.has(e.from)) neighborLevels.push(levels.get(e.from) ?? 0);
+      }
+      if (neighborLevels.length) {
+        levels.set(n.id, Math.min(...neighborLevels));
       }
     }
 
     const laneCounts: Record<number, number> = {};
     const positionedNodes = displayNodes.map((n, idx) => {
-      const lane = levels.get(n.id) ?? serviceLane[n.service] ?? 2;
+      const lane = levels.get(n.id) ?? 0;
       const order = laneCounts[lane] ?? 0;
       laneCounts[lane] = order + 1;
       return {
@@ -405,68 +412,66 @@ export default function UploadPage() {
     const extraNodes: any[] = [];
     const extraEdges: any[] = [];
 
-    const publicEntrypointServices = new Set<string>(["route53", "cloudfront", "apigw", "elb", "s3"]);
-    const publicEntrypointNodes = positionedNodes.filter((n) => publicEntrypointServices.has(n.data.service));
-    if (publicEntrypointNodes.length) {
-      const anchorLane = Math.min(
-        ...publicEntrypointNodes.map((n) => levels.get(n.id) ?? serviceLane[n.data.service] ?? 0)
-      );
-      const anchorX = anchorLane * laneSpacing;
-      const avgY =
-        publicEntrypointNodes.reduce((sum, n) => sum + (n.position?.y ?? 0), 0) /
-        publicEntrypointNodes.length;
-      const userNodeY = avgY - baseNodeHeight * 0.2;
+    if (positionedNodes.length) {
+      const minLane = Math.min(...positionedNodes.map((n) => levels.get(n.id) ?? 0));
+      const publicEntrypointNodes = positionedNodes.filter((n) => (levels.get(n.id) ?? 0) === minLane);
+      if (publicEntrypointNodes.length) {
+        const anchorLane = Math.min(...publicEntrypointNodes.map((n) => levels.get(n.id) ?? 0));
+        const anchorX = anchorLane * laneSpacing;
+        const avgY =
+          publicEntrypointNodes.reduce((sum, n) => sum + (n.position?.y ?? 0), 0) /
+          publicEntrypointNodes.length;
+        const userNodeY = avgY - baseNodeHeight * 0.2;
 
-      extraNodes.push({
-        id: "public-users",
-        type: "user",
-        data: { label: "Users" },
-        position: { x: anchorX - laneSpacing * 1.1, y: userNodeY },
-        selectable: false,
-        draggable: false,
-      });
+        extraNodes.push({
+          id: "public-users",
+          type: "user",
+          data: { label: "Users" },
+          position: { x: anchorX - laneSpacing * 1.1, y: userNodeY },
+          selectable: false,
+          draggable: false,
+        });
 
-      for (const entry of publicEntrypointNodes) {
-        extraEdges.push({
-          id: `public-users-${entry.id}`,
-          source: "public-users",
-          target: entry.id,
-          label: "public access",
-          style: publicEdgeStyle,
-          labelBgStyle: publicLabelBg,
-          labelStyle: publicLabelStyle,
-          animated: true,
-          markerEnd: { type: MarkerType.ArrowClosed, color: publicEdgeStyle.stroke },
+        for (const entry of publicEntrypointNodes) {
+          extraEdges.push({
+            id: `public-users-${entry.id}`,
+            source: "public-users",
+            target: entry.id,
+            label: "public access",
+            style: publicEdgeStyle,
+            labelBgStyle: publicLabelBg,
+            labelStyle: publicLabelStyle,
+            animated: true,
+            markerEnd: { type: MarkerType.ArrowClosed, color: publicEdgeStyle.stroke },
+          });
+        }
+      }
+
+      for (const [vpcId, members] of vpcMembership.entries()) {
+        const memberPositions = members
+          .map((id) => idToPosition.get(id))
+          .filter(Boolean) as Array<{ x: number; y: number }>;
+        if (!memberPositions.length) continue;
+        const minX = Math.min(...memberPositions.map((p) => p.x));
+        const maxX = Math.max(...memberPositions.map((p) => p.x));
+        const minY = Math.min(...memberPositions.map((p) => p.y));
+        const maxY = Math.max(...memberPositions.map((p) => p.y));
+        const width = maxX - minX + baseNodeWidth + groupPaddingX;
+        const height = maxY - minY + baseNodeHeight + groupPaddingY;
+        const vpcNode = nodeById.get(vpcId);
+        groupNodes.push({
+          id: `${vpcId}-group`,
+          type: "group",
+          data: { label: vpcNode?.label ?? "VPC" },
+          position: { x: minX - groupPaddingX / 2, y: minY - groupPaddingY / 2 },
+          style: { width, height },
+          selectable: false,
+          draggable: false,
+          zIndex: 0,
         });
       }
-    }
 
-    for (const [vpcId, members] of vpcMembership.entries()) {
-      const memberPositions = members
-        .map((id) => idToPosition.get(id))
-        .filter(Boolean) as Array<{ x: number; y: number }>;
-      if (!memberPositions.length) continue;
-      const minX = Math.min(...memberPositions.map((p) => p.x));
-      const maxX = Math.max(...memberPositions.map((p) => p.x));
-      const minY = Math.min(...memberPositions.map((p) => p.y));
-      const maxY = Math.max(...memberPositions.map((p) => p.y));
-      const width = maxX - minX + baseNodeWidth + groupPaddingX;
-      const height = maxY - minY + baseNodeHeight + groupPaddingY;
-      const vpcNode = nodeById.get(vpcId);
-      groupNodes.push({
-        id: `${vpcId}-group`,
-        type: "group",
-        data: { label: vpcNode?.label ?? "VPC" },
-        position: { x: minX - groupPaddingX / 2, y: minY - groupPaddingY / 2 },
-        style: { width, height },
-        selectable: false,
-        draggable: false,
-        zIndex: 0,
-      });
-    }
-
-    const infraPositions = positionedNodes.map((n) => n.position);
-    if (infraPositions.length) {
+      const infraPositions = positionedNodes.map((n) => n.position);
       const minX = Math.min(...infraPositions.map((p) => p.x));
       const maxX = Math.max(...infraPositions.map((p) => p.x));
       const minY = Math.min(...infraPositions.map((p) => p.y));
@@ -488,13 +493,13 @@ export default function UploadPage() {
       });
     }
 
-    const laneSequence = [...new Set(positionedNodes.map((n) => levels.get(n.id) ?? serviceLane[n.data.service]))].sort(
+    const laneSequence = [...new Set(positionedNodes.map((n) => levels.get(n.id) ?? 0))].sort(
       (a, b) => a - b
     );
 
     const laneBuckets = new Map<number, typeof positionedNodes>();
     for (const n of positionedNodes) {
-      const lane = levels.get(n.id) ?? serviceLane[n.data.service] ?? 0;
+      const lane = levels.get(n.id) ?? 0;
       const bucket = laneBuckets.get(lane) ?? [];
       bucket.push(n);
       laneBuckets.set(lane, bucket);

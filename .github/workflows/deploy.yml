@@ -103,7 +103,7 @@ jobs:
           echo "Waiting for instance $INSTANCE_ID to pass status checks..."
           aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
           echo "Waiting for SSM ping..."
-          for i in {1..30}; do
+          for i in {1..72}; do
             PING=$(aws ssm describe-instance-information \
               --filters Key=InstanceIds,Values="$INSTANCE_ID" \
               --region "$REGION" \
@@ -114,7 +114,12 @@ jobs:
             fi
             sleep 10
           done
-          echo "SSM not online after wait"
+          echo "SSM not online after wait; dumping instance and SSM info for debugging"
+          aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" --query 'Reservations[0].Instances[0].State.Name'
+          aws ssm describe-instance-information \
+            --filters Key=InstanceIds,Values="$INSTANCE_ID" \
+            --region "$REGION" \
+            --query 'InstanceInformationList[0]'
           exit 1
 
       - name: Setup Node

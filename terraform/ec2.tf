@@ -78,6 +78,11 @@ locals {
     #!/bin/bash
     set -e
     yum update -y
+    # Ensure SSM agent is installed and running so the instance registers with Systems Manager
+    (dnf install -y amazon-ssm-agent || yum install -y amazon-ssm-agent)
+    systemctl enable amazon-ssm-agent
+    systemctl start amazon-ssm-agent
+
     amazon-linux-extras install docker -y || yum install -y docker
     systemctl enable docker
     systemctl start docker
