@@ -10,7 +10,7 @@ export default function SignUp() {
         <div className="space-y-2 text-center">
           <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Sign up</p>
           <h1 className="text-2xl font-semibold text-slate-50">Create your workspace</h1>
-          <p className="text-sm text-slate-400">Start with Google SSO—no passwords needed.</p>
+          <p className="text-sm text-slate-400">Start with SSO — no passwords needed.</p>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
@@ -19,6 +19,12 @@ export default function SignUp() {
             onClick={() => signIn("google", { callbackUrl: "/" })}
           >
             Continue with Google
+          </button>
+          <button
+            className="mt-3 w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-slate-700 hover:bg-slate-800"
+            onClick={() => signIn("github", { callbackUrl: "/" })}
+          >
+            Continue with GitHub
           </button>
           <p className="mt-4 text-center text-sm text-slate-400">
             Already onboarded?{" "}

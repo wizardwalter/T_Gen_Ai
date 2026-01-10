@@ -112,6 +112,8 @@ locals {
       -e NEXT_PUBLIC_API_BASE="${var.next_public_api_base}" \
       -e GOOGLE_CLIENT_ID="${var.google_client_id}" \
       -e GOOGLE_CLIENT_SECRET="${var.google_client_secret}" \
+      -e OAUTH_GITHUB_CLIENT_ID="${var.oauth_github_client_id}" \
+      -e OAUTH_GITHUB_CLIENT_SECRET="${var.oauth_github_client_secret}" \
       -e NEXTAUTH_SECRET="${var.nextauth_secret}" \
       $UI_IMAGE
 

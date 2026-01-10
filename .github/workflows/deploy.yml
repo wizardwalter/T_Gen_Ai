@@ -22,11 +22,15 @@ jobs:
       TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
       TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
+      TF_VAR_oauth_github_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      TF_VAR_oauth_github_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       NEXT_PUBLIC_API_BASE: ${{ secrets.NEXT_PUBLIC_API_BASE }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      OAUTH_GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      OAUTH_GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
       NEXT_PUBLIC_ICON_BASE: ${{secrets.NEXT_PUBLIC_ICON_BASE}}
     steps:
       - name: Checkout
@@ -145,6 +149,8 @@ jobs:
             --arg google_client_id "$GOOGLE_CLIENT_ID" \
             --arg google_client_secret "$GOOGLE_CLIENT_SECRET" \
             --arg nextauth_secret "$NEXTAUTH_SECRET" \
+            --arg github_client_id "$OAUTH_GITHUB_CLIENT_ID" \
+            --arg github_client_secret "$OAUTH_GITHUB_CLIENT_SECRET" \
             '[
               "set -euo pipefail",
               "REGION=\($region)",
@@ -157,7 +163,7 @@ jobs:
               "docker pull \($api_image) || true",
               "docker stop ui || true && docker rm ui || true",
               "docker stop api || true && docker rm api || true",
-              "docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=\($nextauth_url) -e NEXT_PUBLIC_API_BASE=\($next_public_api_base) -e NEXT_PUBLIC_ICON_BASE=\($next_public_icon_base) -e GOOGLE_CLIENT_ID=\($google_client_id) -e GOOGLE_CLIENT_SECRET=\($google_client_secret) -e NEXTAUTH_SECRET=\($nextauth_secret) \($ui_image)",
+              "docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=\($nextauth_url) -e NEXT_PUBLIC_API_BASE=\($next_public_api_base) -e NEXT_PUBLIC_ICON_BASE=\($next_public_icon_base) -e GOOGLE_CLIENT_ID=\($google_client_id) -e GOOGLE_CLIENT_SECRET=\($google_client_secret) -e NEXTAUTH_SECRET=\($nextauth_secret) -e OAUTH_GITHUB_CLIENT_ID=\($github_client_id) -e OAUTH_GITHUB_CLIENT_SECRET=\($github_client_secret) \($ui_image)",
               "docker run -d --name api -p 4000:4000 \($api_image)",
               "docker ps"
             ]')

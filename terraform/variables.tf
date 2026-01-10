@@ -82,6 +82,18 @@ variable "google_client_secret" {
   default     = ""
 }
 
+variable "oauth_github_client_id" {
+  description = "GitHub OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "oauth_github_client_secret" {
+  description = "GitHub OAuth client secret"
+  type        = string
+  default     = ""
+}
+
 variable "nextauth_secret" {
   description = "NEXTAUTH_SECRET for the UI container"
   type        = string
