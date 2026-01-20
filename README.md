@@ -22,6 +22,8 @@ npm run build        # builds api and ui
 npm --prefix api run dev    # http://localhost:4000
 npm --prefix ui run dev     # http://localhost:3000
 ```
+Local DB + Prisma setup: see `docs/LOCAL_DB.md`.
+
 Env to set for the UI (e.g. `.env.local`):
 ```
 NEXTAUTH_URL=http://localhost:3000

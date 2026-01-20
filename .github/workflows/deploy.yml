@@ -24,6 +24,9 @@ jobs:
       TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
       TF_VAR_oauth_github_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
       TF_VAR_oauth_github_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+      TF_VAR_db_master_username: ${{ secrets.DB_MASTER_USERNAME }}
+      TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
+      TF_VAR_db_name: ${{ secrets.DB_NAME }}
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       NEXT_PUBLIC_API_BASE: ${{ secrets.NEXT_PUBLIC_API_BASE }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}

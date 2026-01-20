@@ -105,3 +105,39 @@ variable "canonical_hostname" {
   type        = string
   default     = ""
 }
+
+variable "db_name" {
+  description = "Database name for Aurora"
+  type        = string
+  default     = "appdb"
+}
+
+variable "db_master_username" {
+  description = "Master username for Aurora"
+  type        = string
+  default     = "appuser"
+}
+
+variable "db_master_password" {
+  description = "Master password for Aurora"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_port" {
+  description = "Database port"
+  type        = number
+  default     = 5432
+}
+
+variable "db_min_capacity_acu" {
+  description = "Aurora Serverless v2 minimum ACUs"
+  type        = number
+  default     = 0.5
+}
+
+variable "db_max_capacity_acu" {
+  description = "Aurora Serverless v2 maximum ACUs"
+  type        = number
+  default     = 2
+}

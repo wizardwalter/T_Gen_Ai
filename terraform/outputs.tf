@@ -47,3 +47,18 @@ output "icons_base_url" {
   description = "Base URL for icons bucket"
   value       = "https://${aws_s3_bucket.icons.bucket}.s3.amazonaws.com"
 }
+
+output "aurora_endpoint" {
+  description = "Writer endpoint for Aurora"
+  value       = aws_rds_cluster.app.endpoint
+}
+
+output "aurora_reader_endpoint" {
+  description = "Reader endpoint for Aurora"
+  value       = aws_rds_cluster.app.reader_endpoint
+}
+
+output "aurora_db_name" {
+  description = "Database name"
+  value       = aws_rds_cluster.app.database_name
+}

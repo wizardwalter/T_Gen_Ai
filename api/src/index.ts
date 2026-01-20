@@ -9,6 +9,7 @@ try {
 import cors from "cors";
 import express from "express";
 import multer from "multer";
+import { prisma } from "./db";
 import { parseTerraformToGraph } from "./parser";
 import { parsePlanJsonToGraph } from "./planParser";
 
@@ -64,6 +65,17 @@ app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/health/db", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({ status: "ok" });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[health/db] failed", err);
+    return res.status(500).json({ status: "error", message: "DB not reachable" });
+  }
 });
 
 app.post("/api/terraform/upload", upload.array("files", 50), (req, res) => {

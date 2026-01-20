@@ -12,5 +12,9 @@
     "start": "node scripts/start-all.js",
     "start:api": "npm --prefix api run start",
     "start:ui": "npm --prefix ui run start"
+  },
+  "devDependencies": {
+    "@prisma/client": "5.19.1",
+    "prisma": "5.19.1"
   }
 }

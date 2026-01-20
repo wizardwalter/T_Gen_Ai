@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: aidevops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aidevops
+      POSTGRES_PASSWORD: aidevops
+      POSTGRES_DB: aidevops
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
