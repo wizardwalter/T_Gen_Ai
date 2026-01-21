@@ -33,7 +33,8 @@ export const authOptions: NextAuthOptions = {
 
       let allowSignup = false;
       try {
-        const signupFlag = cookies().get(SIGNUP_COOKIE)?.value;
+        const cookieStore = await cookies();
+        const signupFlag = cookieStore.get(SIGNUP_COOKIE)?.value;
         allowSignup = signupFlag === "true";
       } catch (err) {
         // Reading cookies can fail outside a request context; default to not allowing signup.
