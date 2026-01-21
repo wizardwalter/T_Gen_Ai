@@ -102,6 +102,52 @@ jobs:
           echo "CF_DIST_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_ENV
           echo "APP_HOST_INSTANCE_ID=$(terraform output -raw app_host_instance_id)" >> $GITHUB_ENV
 
+      - name: Ensure app host running
+        run: |
+          set -euo pipefail
+          INSTANCE_ID="${APP_HOST_INSTANCE_ID:-}"
+          REGION="${AWS_REGION}"
+
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "null" ]; then
+            echo "No app host instance id found; skipping start."
+            exit 0
+          fi
+
+          STATE=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --region "$REGION" \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text 2>/dev/null || true)
+
+          if [ -z "$STATE" ]; then
+            echo "Instance $INSTANCE_ID not found; skipping."
+            exit 0
+          fi
+
+          if [ "$STATE" = "running" ]; then
+            echo "Instance already running."
+            exit 0
+          fi
+
+          if [ "$STATE" = "pending" ]; then
+            echo "Instance pending; waiting for running/state checks..."
+            aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
+            aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
+            exit 0
+          fi
+
+          if [ "$STATE" = "stopping" ]; then
+            echo "Instance stopping; waiting for stopped state before starting..."
+            aws ec2 wait instance-stopped --instance-ids "$INSTANCE_ID" --region "$REGION"
+          fi
+
+          echo "Starting instance $INSTANCE_ID..."
+          aws ec2 start-instances --instance-ids "$INSTANCE_ID" --region "$REGION"
+          echo "Waiting for instance to pass status checks..."
+          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
+          aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
+          echo "Instance is running."
+
       - name: Wait for app host ready
         run: |
           set -e

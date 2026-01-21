@@ -43,7 +43,18 @@ variable "acm_certificate_arn" {
 variable "host_instance_type" {
   description = "EC2 instance type for the app host"
   type        = string
-  default     = "t3.micro"
+  default     = "t3.small"
+}
+
+variable "host_cpu_credit_mode" {
+  description = "CPU credit option for burstable instances. Use unlimited to avoid throttling under sustained load."
+  type        = string
+  default     = "unlimited"
+
+  validation {
+    condition     = contains(["standard", "unlimited"], var.host_cpu_credit_mode)
+    error_message = "host_cpu_credit_mode must be standard or unlimited"
+  }
 }
 
 variable "ui_container_port" {

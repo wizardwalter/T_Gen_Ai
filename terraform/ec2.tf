@@ -151,6 +151,11 @@ resource "aws_instance" "app_host" {
   iam_instance_profile   = aws_iam_instance_profile.app_host.name
   vpc_security_group_ids = [aws_security_group.app_host.id]
   user_data              = local.app_user_data
+  monitoring             = true
+
+  credit_specification {
+    cpu_credits = var.host_cpu_credit_mode
+  }
 
   tags = {
     Name = "${var.project_name}-app-host"
