@@ -1,7 +1,10 @@
 # Build and serve the Next.js UI
 FROM node:20-alpine AS deps
 WORKDIR /app
+ARG DATABASE_URL="postgresql://local:local@localhost:5432/localdb"
+ENV DATABASE_URL=$DATABASE_URL
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm install
 
 FROM node:20-alpine AS builder
@@ -11,6 +14,7 @@ ARG NEXT_PUBLIC_API_BASE
 ARG NEXTAUTH_URL
 ARG NEXT_PUBLIC_ICON_BASE
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
 COPY . .
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
