@@ -208,12 +208,15 @@ const styleForRelation = (relation?: string) => {
 
 export default function UploadPage() {
   const { data: session } = useSession();
+  const isAuthenticated = Boolean(session?.user);
+  const isSubscriber = session?.user && (session.user as { isSubscriber?: boolean }).isSubscriber === true;
   const [folderName, setFolderName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showInfra, setShowInfra] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const showPaywall = Boolean(result) && !isSubscriber;
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -242,6 +245,16 @@ export default function UploadPage() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const startCheckout = async () => {
+    const resp = await fetch("/api/billing/checkout", { method: "POST" });
+    if (!resp.ok) {
+      throw new Error("Checkout failed. Please try again.");
+    }
+    const data = (await resp.json()) as { url?: string };
+    if (!data.url) throw new Error("Checkout link missing.");
+    window.location.href = data.url;
   };
 
   const handleNodeClick: NodeMouseHandler = (_event, node: Node) => {
@@ -683,7 +696,30 @@ export default function UploadPage() {
                     </label>
                   </div>
                 <div className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-                  {flow.nodes.length ? (
+                  {showPaywall ? (
+                    <div className="relative flex h-full items-center justify-center rounded-2xl border border-slate-800/60 bg-slate-900/70 p-10 text-center">
+                      <div className="space-y-3">
+                        <p className="text-lg font-semibold text-slate-50">Subscribe to unlock this diagram</p>
+                        <p className="text-sm text-slate-300">
+                          Your graph is ready. Subscribe for $4.99/mo to view and download it securely.
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                          <button
+                            onClick={() => startCheckout().catch((err) => setError(err.message))}
+                            className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-sm font-semibold text-slate-50 shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+                          >
+                            Subscribe for $4.99/mo
+                          </button>
+                          <Link
+                            href="/"
+                            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 shadow-sm transition hover:border-slate-500"
+                          >
+                            Back home
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ) : flow.nodes.length ? (
                     <ReactFlow
                       nodes={flow.nodes}
                       edges={flow.edges}
@@ -704,8 +740,8 @@ export default function UploadPage() {
                     >
                       <Background gap={18} size={1} color="#e2e8f0" />
                       <Controls className="bg-white/90 text-slate-700 shadow-sm dark:bg-slate-900/90 dark:text-slate-100" />
-                      </ReactFlow>
-                    ) : (
+                    </ReactFlow>
+                  ) : (
                       <div className="flex h-full items-center justify-center text-sm text-slate-600 dark:text-slate-400">
                         No diagram to show yet.
                       </div>
@@ -816,7 +852,7 @@ export default function UploadPage() {
             </div>
           )}
         </div>
-        {selectedNodeId && result && (
+        {isSubscriber && selectedNodeId && result && (
           <div className="mt-10 w-full rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
             <div className="flex items-center justify-between">
               <div>

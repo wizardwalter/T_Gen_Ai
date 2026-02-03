@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Terraform Diagrammer | DevOps AI",
-  description: "Upload Terraform, parse it, and see a clean three-tier diagram in seconds.",
+  title: "StackGenerate | Terraform Diagrammer & Cloud Architecture",
+  description: "Upload Terraform, parse it, and see a clean cloud architecture diagram with auth, FAQs, and roadmap insights.",
+  keywords: [
+    "Terraform diagram",
+    "cloud architecture",
+    "IaC visualization",
+    "AWS diagram",
+    "DevOps tooling",
+    "NextAuth SSO",
+  ],
   icons: {
     icon: [
       { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "512x512" },
@@ -34,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

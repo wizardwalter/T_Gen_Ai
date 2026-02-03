@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { SiteHeader } from "./components/site-header";
+import { SiteFooter } from "./components/site-footer";
 
 const codeLines = [
   'module "network" {',
@@ -30,73 +31,19 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
-      <nav className="border-b border-slate-200/80 bg-white/85 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-slate-800 dark:text-slate-100">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/tgenai_logo.png"
-              alt="DevOps AI logo"
-              width={60}
-              height={60}
-              className="drop-shadow-[0_0_35px_rgba(125,211,252,0.35)]"
-              priority
-            />
-            <div className="leading-tight">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">
-                Terraform Diagrammer
-              </p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-                AI Ops Design Studio
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {session?.user ? (
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-sm text-slate-800 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-100">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                  🙂
-                </span>
-                <span className="max-w-[140px] truncate">
-                  {session.user.name || session.user.email}
-                </span>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="ml-2 rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-500"
-                >
-                  Sign out
-                </button>
-              </div>
-            ) : (
-              <>
-                <Link
-                  href="/auth/sign-in"
-                  className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-800 shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/auth/sign-up"
-                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      <SiteHeader />
 
       <main className="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 pb-20 pt-12 text-center">
         <div className="space-y-4">
           <span className="inline-flex rounded-full border border-slate-300 bg-white/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-slate-700 shadow-[0_6px_18px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
-            Read code · Render architecture
+            Read code &rarr; Render architecture
           </span>
           <h1 className="hero-title text-4xl font-semibold leading-tight sm:text-5xl">
             Upload Terraform. Get a living architecture diagram.
           </h1>
           <p className="hero-sub mx-auto max-w-3xl text-base">
             We parse your IaC, understand resources and relationships, and sketch a clean system view.
-            No manual draw.io. Just code → diagram.
+            No manual draw.io. Just code to diagram.
           </p>
         </div>
 
@@ -170,9 +117,9 @@ export default function Home() {
                   How it works
                 </p>
                 <ul className="mt-2 space-y-1.5">
-                  <li>› Parse Terraform modules and resources</li>
-                  <li>› Detect relationships, networks, and state</li>
-                  <li>› Sketch a clean diagram with minimal noise</li>
+                  <li>- Parse Terraform modules and resources</li>
+                  <li>- Detect relationships, networks, and state</li>
+                  <li>- Sketch a clean diagram with minimal noise</li>
                 </ul>
               </div>
             </div>
@@ -187,10 +134,47 @@ export default function Home() {
             Start now
           </Link>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            {session ? "Authenticated with Google — ready to upload." : "Sign in with Google to start uploading your Terraform."}
+            {session ? "Authenticated and ready to upload." : "Sign in with Google to start uploading your Terraform."}
           </p>
         </div>
+
+        <section className="mt-12 w-full rounded-3xl border border-slate-800/70 bg-slate-950/70 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.35)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3 md:max-w-xl text-left">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Watch the demo</p>
+              <h2 className="text-2xl font-semibold text-slate-50">See StackGenerate in 30 seconds</h2>
+              <p className="text-sm text-slate-300">
+                Upload Terraform, parse, and render a clean cloud diagram. Precise mouse movement, crisp overlays, and zero noise.
+                This demo is recorded from our UI so you know exactly what you get.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/auth/sign-up"
+                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_12px_36px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+                >
+                  Try it yourself
+                </Link>
+                <Link
+                  href="/contact"
+                  className="rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:border-sky-500/70 hover:text-sky-200"
+                >
+                  Talk with us
+                </Link>
+              </div>
+            </div>
+            <div className="relative mt-4 flex w-full max-w-xl items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_20px_60px_rgba(15,23,42,0.4)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.14),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(168,85,247,0.14),transparent_35%)]" />
+              <div className="relative aspect-video w-full">
+                <div className="flex h-full items-center justify-center text-sm text-slate-300">
+                  Demo video placeholder — drop in your 30s recording (webm/mp4) here.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

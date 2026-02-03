@@ -2,10 +2,7 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
-const SIGNUP_COOKIE = "signup_intent";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -26,36 +23,38 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user }) {
       const email = user.email;
       if (!email) {
-        return "/auth/sign-up?error=no_email";
+        return "/auth/sign-in?error=no_email";
       }
 
       const existingUser = await prisma.user.findUnique({ where: { email } });
-
-      let allowSignup = false;
-      try {
-        const cookieStore = await cookies();
-        const signupFlag = cookieStore.get(SIGNUP_COOKIE)?.value;
-        allowSignup = signupFlag === "true";
-      } catch (err) {
-        // Reading cookies can fail outside a request context; default to not allowing signup.
-        allowSignup = false;
-      }
-
-      if (existingUser || allowSignup) {
-        return true;
-      }
-
-      return `/auth/sign-up?error=no_account&email=${encodeURIComponent(email)}`;
+      const status = existingUser ? "back" : "new";
+      (user as { welcomeStatus?: string }).welcomeStatus = status;
+      return true;
     },
     async jwt({ token, user }) {
       if (user?.id) {
         token.sub = user.id;
       }
+      if (user && (user as { welcomeStatus?: string }).welcomeStatus) {
+        (token as { welcomeStatus?: string }).welcomeStatus = (user as { welcomeStatus?: string }).welcomeStatus;
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.sub) {
-        (session.user as { id?: string }).id = token.sub;
+        const userRecord = (await prisma.user.findUnique({
+          where: { id: token.sub },
+        })) as { id?: string; isSubscriber?: boolean; plan?: string | null; subscriptionStatus?: string | null } | null;
+
+        (session.user as { id?: string; isSubscriber?: boolean; plan?: string | null; subscriptionStatus?: string | null }).id =
+          userRecord?.id ?? token.sub;
+        (session.user as { isSubscriber?: boolean }).isSubscriber = userRecord?.isSubscriber ?? false;
+        (session.user as { plan?: string | null }).plan = userRecord?.plan ?? null;
+        (session.user as { subscriptionStatus?: string | null }).subscriptionStatus = userRecord?.subscriptionStatus ?? null;
+      }
+      if (session.user && (token as { welcomeStatus?: string }).welcomeStatus) {
+        (session.user as { welcomeStatus?: string }).welcomeStatus = (token as { welcomeStatus?: string }).welcomeStatus;
+        delete (token as { welcomeStatus?: string }).welcomeStatus;
       }
       return session;
     },

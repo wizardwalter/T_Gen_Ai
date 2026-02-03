@@ -14,7 +14,11 @@ model User {
   emailVerified  DateTime?
   image          String?
   isSubscriber   Boolean   @default(false)
-  tokenCount     Int       @default(0)
+  plan           String?   @default("free")
+  subscriptionStatus String? @default("inactive")
+  stripeCustomerId    String? @unique
+  stripeSubscriptionId String? @unique
+  currentPeriodEnd   DateTime?
   accounts       Account[]
   sessions       Session[]
   createdAt      DateTime  @default(now())
