@@ -209,6 +209,8 @@ const publicLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#f8fafc" };
 const manualEdgeStyle = { stroke: "#38bdf8", strokeWidth: 2.4, strokeDasharray: "6 6" };
 const manualLabelBg = { fill: "#0f172a", fillOpacity: 0.85, color: "#38bdf8" };
 const manualLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#38bdf8" };
+const LANE_SPACING = 320;
+const ROW_SPACING = 150;
 const permissionHints = ["permission", "policy", "role", "attach", "access", "pull", "push", "ecr", "iam"];
 const styleForRelation = (relation?: string) => {
   const rel = (relation ?? "").toLowerCase();
@@ -230,6 +232,7 @@ export default function UploadPage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [pickedNodes, setPickedNodes] = useState<string[]>([]);
   const [manualEdges, setManualEdges] = useState<Array<{ id: string; from: string; to: string; label?: string }>>([]);
+  const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const diagramRef = useRef<HTMLDivElement | null>(null);
   const showPaywall = Boolean(result) && !isSubscriber;
@@ -258,6 +261,7 @@ export default function UploadPage() {
       setSelectedNodeId(null);
       setPickedNodes([]);
       setManualEdges([]);
+      setManualPositions({});
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -282,6 +286,16 @@ export default function UploadPage() {
       next.push(node.id);
       return next.slice(-2);
     });
+  };
+
+  const handleNodeDragStop = (_event: any, node: Node) => {
+    if (node.type !== "aws") return;
+    const snappedX = Math.round(node.position.x / LANE_SPACING) * LANE_SPACING;
+    const snappedY = Math.round(node.position.y / ROW_SPACING) * ROW_SPACING;
+    setManualPositions((prev) => ({
+      ...prev,
+      [node.id]: { x: snappedX, y: snappedY },
+    }));
   };
 
   const addManualRelation = () => {
@@ -343,8 +357,6 @@ export default function UploadPage() {
   const flow = useMemo(() => {
     if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [], legendNodes: [] };
 
-    const laneSpacing = 320;
-    const rowSpacing = 150;
     const baseNodeWidth = 280;
     const baseNodeHeight = 96;
     const groupPaddingX = 200;
@@ -526,11 +538,17 @@ export default function UploadPage() {
           service: n.service ?? "generic",
           isPicked: pickedSet.has(n.id),
         },
-        position: { x: lane * laneSpacing, y: order * rowSpacing },
+        position: { x: lane * LANE_SPACING, y: order * ROW_SPACING },
       };
     });
 
-    const idToPosition = new Map(positionedNodes.map((n) => [n.id, n.position]));
+    const positionedWithOverrides = positionedNodes.map((n) => {
+      const override = manualPositions[n.id];
+      if (!override) return n;
+      return { ...n, position: override };
+    });
+
+    const idToPosition = new Map(positionedWithOverrides.map((n) => [n.id, n.position]));
 
     const groupNodes: any[] = [];
     const extraNodes: any[] = [];
@@ -538,10 +556,10 @@ export default function UploadPage() {
 
     if (positionedNodes.length) {
       const minLane = Math.min(...positionedNodes.map((n) => levels.get(n.id) ?? 0));
-      const publicEntrypointNodes = positionedNodes.filter((n) => (levels.get(n.id) ?? 0) === minLane);
+      const publicEntrypointNodes = positionedWithOverrides.filter((n) => (levels.get(n.id) ?? 0) === minLane);
       if (publicEntrypointNodes.length) {
         const anchorLane = Math.min(...publicEntrypointNodes.map((n) => levels.get(n.id) ?? 0));
-        const anchorX = anchorLane * laneSpacing;
+        const anchorX = anchorLane * LANE_SPACING;
         const avgY =
           publicEntrypointNodes.reduce((sum, n) => sum + (n.position?.y ?? 0), 0) /
           publicEntrypointNodes.length;
@@ -551,7 +569,7 @@ export default function UploadPage() {
           id: "public-users",
           type: "user",
           data: { label: "Users" },
-          position: { x: anchorX - laneSpacing * 1.1, y: userNodeY },
+          position: { x: anchorX - LANE_SPACING * 1.1, y: userNodeY },
           selectable: false,
           draggable: false,
         });
@@ -595,7 +613,7 @@ export default function UploadPage() {
         });
       }
 
-      const infraPositions = positionedNodes.map((n) => n.position);
+      const infraPositions = positionedWithOverrides.map((n) => n.position);
       const minX = Math.min(...infraPositions.map((p) => p.x));
       const maxX = Math.max(...infraPositions.map((p) => p.x));
       const minY = Math.min(...infraPositions.map((p) => p.y));
@@ -617,12 +635,12 @@ export default function UploadPage() {
       });
     }
 
-    const laneSequence = [...new Set(positionedNodes.map((n) => levels.get(n.id) ?? 0))].sort(
+    const laneSequence = [...new Set(positionedWithOverrides.map((n) => levels.get(n.id) ?? 0))].sort(
       (a, b) => a - b
     );
 
-    const laneBuckets = new Map<number, typeof positionedNodes>();
-    for (const n of positionedNodes) {
+    const laneBuckets = new Map<number, typeof positionedWithOverrides>();
+    for (const n of positionedWithOverrides) {
       const lane = levels.get(n.id) ?? 0;
       const bucket = laneBuckets.get(lane) ?? [];
       bucket.push(n);
@@ -686,10 +704,10 @@ export default function UploadPage() {
       }));
 
     const fullEdges = [...edges, ...extraEdges, ...manualStyledEdges];
-    const allNodes = [...groupNodes, ...positionedNodes, ...extraNodes];
+    const allNodes = [...groupNodes, ...positionedWithOverrides, ...extraNodes];
 
     return { nodes: allNodes, edges: fullEdges, rawNodes: displayNodes, rawEdges: [...rawEdges, ...manualEdges], legendNodes };
-  }, [result, showInfra, manualEdges, pickedNodes]);
+  }, [result, showInfra, manualEdges, pickedNodes, manualPositions]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -866,6 +884,7 @@ export default function UploadPage() {
                         markerEnd: { type: MarkerType.ArrowClosed, color: flowEdgeStyle.stroke },
                       }}
                       onNodeClick={handleNodeClick}
+                      onNodeDragStop={handleNodeDragStop}
                       onPaneClick={() => setPickedNodes([])}
                       proOptions={{ hideAttribution: true }}
                     >
@@ -1073,7 +1092,5 @@ export default function UploadPage() {
     </div>
   );
 }
-
-
 
 

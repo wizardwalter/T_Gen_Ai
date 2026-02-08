@@ -11,8 +11,8 @@ const contactOptions = [
   {
     title: "Support",
     detail: "Questions about uploads, auth, or billing? We respond quickly.",
-    action: "hello@stackgenerate.com",
-    href: "mailto:hello@stackgenerate.com",
+    action: "support@stackgenerate.com",
+    href: "mailto:support@stackgenerate.com",
   },
   {
     title: "Partnerships",
@@ -23,8 +23,8 @@ const contactOptions = [
   {
     title: "Security",
     detail: "Report a vulnerability or ask about our security model.",
-    action: "support@stackgenerate.com",
-    href: "mailto:support@stackgenerate.com",
+    action: "security@stackgenerate.com",
+    href: "mailto:security@stackgenerate.com",
   },
 ];
 
