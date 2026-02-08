@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
   Handle,
   MarkerType,
+  Panel,
   Position,
+  getNodesBounds,
+  getViewportForBounds,
   type Node,
   type NodeMouseHandler,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 
 const rawApiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
 // Normalize: drop trailing slash and a trailing "/api" if it was included in the secret,
@@ -97,13 +102,17 @@ const serviceIcons: Record<string, string> = {
     ),
 };
 
-type FlowNodeData = { label: string; service: string };
+type FlowNodeData = { label: string; service: string; isPicked?: boolean };
 
 const AwsNode = ({ data }: { data: FlowNodeData }) => {
   const color = serviceColors[data.service] ?? serviceColors.generic;
   const icon = serviceIcons[data.service] ?? serviceIcons.generic;
+  const ring = data.isPicked ? "ring-2 ring-sky-400/80 shadow-[0_0_0_6px_rgba(56,189,248,0.15)]" : "";
   return (
-    <div className="relative flex items-center gap-3 rounded-xl border bg-white px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.08)] dark:bg-slate-900" style={{ borderColor: `${color}55` }}>
+    <div
+      className={`relative flex items-center gap-3 rounded-xl border bg-white px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.08)] dark:bg-slate-900 ${ring}`}
+      style={{ borderColor: `${color}55` }}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -197,6 +206,9 @@ const permissionLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#7f1d1d" };
 const publicEdgeStyle = { stroke: "#f8fafc", strokeWidth: 2.6 };
 const publicLabelBg = { fill: "#0f172a", fillOpacity: 0.85, color: "#f8fafc" };
 const publicLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#f8fafc" };
+const manualEdgeStyle = { stroke: "#38bdf8", strokeWidth: 2.4, strokeDasharray: "6 6" };
+const manualLabelBg = { fill: "#0f172a", fillOpacity: 0.85, color: "#38bdf8" };
+const manualLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#38bdf8" };
 const permissionHints = ["permission", "policy", "role", "attach", "access", "pull", "push", "ecr", "iam"];
 const styleForRelation = (relation?: string) => {
   const rel = (relation ?? "").toLowerCase();
@@ -216,6 +228,10 @@ export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [showInfra, setShowInfra] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [pickedNodes, setPickedNodes] = useState<string[]>([]);
+  const [manualEdges, setManualEdges] = useState<Array<{ id: string; from: string; to: string; label?: string }>>([]);
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const diagramRef = useRef<HTMLDivElement | null>(null);
   const showPaywall = Boolean(result) && !isSubscriber;
 
   const handleUpload = async (files: File[]) => {
@@ -240,6 +256,8 @@ export default function UploadPage() {
       const json = (await resp.json()) as UploadResult;
       setResult(json);
       setSelectedNodeId(null);
+      setPickedNodes([]);
+      setManualEdges([]);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -259,6 +277,67 @@ export default function UploadPage() {
 
   const handleNodeClick: NodeMouseHandler = (_event, node: Node) => {
     setSelectedNodeId(node.id);
+    setPickedNodes((prev) => {
+      const next = prev.filter((id) => id !== node.id);
+      next.push(node.id);
+      return next.slice(-2);
+    });
+  };
+
+  const addManualRelation = () => {
+    if (pickedNodes.length < 2) return;
+    const [from, to] = pickedNodes;
+    if (!from || !to || from === to) return;
+    const label = window.prompt("Relation label", "custom") ?? "custom";
+    const id = `manual-${from}-${to}-${Date.now()}`;
+    setManualEdges((prev) => {
+      if (prev.some((e) => e.from === from && e.to === to && (e.label ?? "custom") === label)) {
+        return prev;
+      }
+      return [...prev, { id, from, to, label }];
+    });
+  };
+
+  const clearManualRelations = () => setManualEdges([]);
+
+  const exportPdf = async () => {
+    if (!reactFlowInstance || !diagramRef.current) return;
+    const nodes = reactFlowInstance.getNodes?.() ?? [];
+    if (!nodes.length) return;
+
+    const bounds = getNodesBounds(nodes);
+    const padding = 120;
+    const width = Math.max(bounds.width + padding * 2, 1200);
+    const height = Math.max(bounds.height + padding * 2, 800);
+    const viewport = getViewportForBounds(bounds, width, height, 0.2, 2, 1);
+    const prevViewport = reactFlowInstance.getViewport?.();
+
+    await reactFlowInstance.setViewport?.(viewport, { duration: 0 });
+
+    const viewportEl = diagramRef.current.querySelector(".react-flow__viewport") as HTMLElement | null;
+    if (!viewportEl) return;
+
+    const dataUrl = await toPng(viewportEl, {
+      backgroundColor: "#0b1220",
+      width,
+      height,
+      style: {
+        width: `${width}px`,
+        height: `${height}px`,
+      },
+    });
+
+    const pdf = new jsPDF({
+      orientation: width >= height ? "landscape" : "portrait",
+      unit: "px",
+      format: [width, height],
+    });
+    pdf.addImage(dataUrl, "PNG", 0, 0, width, height);
+    pdf.save("architecture-diagram.pdf");
+
+    if (prevViewport) {
+      await reactFlowInstance.setViewport?.(prevViewport, { duration: 0 });
+    }
   };
 
   const flow = useMemo(() => {
@@ -406,7 +485,35 @@ export default function UploadPage() {
       }
     }
 
+    const serviceRank = (service: string | undefined, label: string | undefined) => {
+      const s = service ?? "generic";
+      if (["route53", "cloudfront", "waf"].includes(s)) return 0;
+      if (["apigw", "appsync", "cognito", "elb"].includes(s)) return 1;
+      if (["lambda", "ecs", "ec2", "eks", "ecr", "codebuild"].includes(s)) return 2;
+      if (["dynamodb", "rds", "neptune", "elasticache", "opensearch", "athena", "s3", "sqs", "sns"].includes(s))
+        return 3;
+      if (["vpc", "iam", "kms", "secrets", "ssm", "observability"].includes(s)) return 4;
+      if (label) {
+        const l = label.toLowerCase();
+        if (l.includes("appsync") || l.includes("api")) return 1;
+        if (l.includes("cognito") || l.includes("auth")) return 1;
+        if (l.includes("lambda") || l.includes("function")) return 2;
+        if (l.includes("dynamo") || l.includes("db")) return 3;
+      }
+      return 2;
+    };
+
+    // If everything collapsed into a single lane, spread by service category.
+    const levelValues = new Set([...levels.values()]);
+    if (levelValues.size <= 1) {
+      for (const n of displayNodes) {
+        const rank = serviceRank(n.service, n.label ?? n.id);
+        levels.set(n.id, rank);
+      }
+    }
+
     const laneCounts: Record<number, number> = {};
+    const pickedSet = new Set(pickedNodes);
     const positionedNodes = displayNodes.map((n, idx) => {
       const lane = levels.get(n.id) ?? 0;
       const order = laneCounts[lane] ?? 0;
@@ -414,7 +521,11 @@ export default function UploadPage() {
       return {
         id: n.id ?? `node-${idx}`,
         type: "aws",
-        data: { label: n.label ?? n.id ?? `Node ${idx}`, service: n.service ?? "generic" },
+        data: {
+          label: n.label ?? n.id ?? `Node ${idx}`,
+          service: n.service ?? "generic",
+          isPicked: pickedSet.has(n.id),
+        },
         position: { x: lane * laneSpacing, y: order * rowSpacing },
       };
     });
@@ -559,11 +670,26 @@ export default function UploadPage() {
       };
     });
 
-    const fullEdges = [...edges, ...extraEdges];
+    const manualStyledEdges = manualEdges
+      .filter((e) => nodeById.has(e.from) && nodeById.has(e.to))
+      .map((e, idx) => ({
+        id: e.id ?? `manual-${idx}-${e.from}-${e.to}`,
+        source: e.from,
+        target: e.to,
+        label: e.label ?? "custom",
+        type: "smoothstep",
+        style: manualEdgeStyle,
+        labelBgStyle: manualLabelBg,
+        labelStyle: manualLabelStyle,
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed, color: manualEdgeStyle.stroke },
+      }));
+
+    const fullEdges = [...edges, ...extraEdges, ...manualStyledEdges];
     const allNodes = [...groupNodes, ...positionedNodes, ...extraNodes];
 
-    return { nodes: allNodes, edges: fullEdges, rawNodes: displayNodes, rawEdges, legendNodes };
-  }, [result, showInfra]);
+    return { nodes: allNodes, edges: fullEdges, rawNodes: displayNodes, rawEdges: [...rawEdges, ...manualEdges], legendNodes };
+  }, [result, showInfra, manualEdges, pickedNodes]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -695,7 +821,10 @@ export default function UploadPage() {
                       <span>Show infra details</span>
                     </label>
                   </div>
-                <div className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+                <div
+                  ref={diagramRef}
+                  className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
+                >
                   {showPaywall ? (
                     <div className="relative flex h-full items-center justify-center rounded-2xl border border-slate-800/60 bg-slate-900/70 p-10 text-center">
                       <div className="space-y-3">
@@ -725,6 +854,7 @@ export default function UploadPage() {
                       edges={flow.edges}
                       nodeTypes={nodeTypes}
                       style={{ background: "transparent" }}
+                      onInit={setReactFlowInstance}
                       fitView
                       fitViewOptions={{ padding: 0.2 }}
                       defaultEdgeOptions={{
@@ -736,10 +866,49 @@ export default function UploadPage() {
                         markerEnd: { type: MarkerType.ArrowClosed, color: flowEdgeStyle.stroke },
                       }}
                       onNodeClick={handleNodeClick}
+                      onPaneClick={() => setPickedNodes([])}
                       proOptions={{ hideAttribution: true }}
                     >
                       <Background gap={18} size={1} color="#e2e8f0" />
                       <Controls className="bg-white/90 text-slate-700 shadow-sm dark:bg-slate-900/90 dark:text-slate-100" />
+                      <Panel position="top-right" className="flex flex-col gap-2">
+                        <div className="rounded-2xl border border-slate-200 bg-white/95 p-3 text-xs text-slate-700 shadow-lg dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            Export
+                          </p>
+                          <button
+                            onClick={() => exportPdf().catch((err) => setError(err.message))}
+                            className="mt-2 w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          >
+                            Export PDF
+                          </button>
+                        </div>
+                        {pickedNodes.length === 2 && (
+                          <div className="rounded-2xl border border-slate-200 bg-white/95 p-3 text-xs text-slate-700 shadow-lg dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                              Manual relations
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">
+                              Connect the two highlighted nodes.
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                onClick={addManualRelation}
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                              >
+                                Add relation
+                              </button>
+                              <button
+                                onClick={clearManualRelations}
+                                disabled={manualEdges.length === 0}
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </Panel>
                     </ReactFlow>
                   ) : (
                       <div className="flex h-full items-center justify-center text-sm text-slate-600 dark:text-slate-400">
@@ -904,12 +1073,6 @@ export default function UploadPage() {
     </div>
   );
 }
-
-
-
-
-
-
 
 
 

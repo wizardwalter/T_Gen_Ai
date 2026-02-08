@@ -25,18 +25,14 @@ export const authOptions: NextAuthOptions = {
       if (!email) {
         return "/auth/sign-in?error=no_email";
       }
-
-      const existingUser = await prisma.user.findUnique({ where: { email } });
-      const status = existingUser ? "back" : "new";
-      (user as { welcomeStatus?: string }).welcomeStatus = status;
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, isNewUser }) {
       if (user?.id) {
         token.sub = user.id;
       }
-      if (user && (user as { welcomeStatus?: string }).welcomeStatus) {
-        (token as { welcomeStatus?: string }).welcomeStatus = (user as { welcomeStatus?: string }).welcomeStatus;
+      if (user?.email) {
+        (token as { welcomeStatus?: string }).welcomeStatus = isNewUser ? "new" : "back";
       }
       return token;
     },

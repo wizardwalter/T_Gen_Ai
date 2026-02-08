@@ -46,6 +46,13 @@ const serviceMap: Record<string, string> = {
   aws_api_gateway_stage: "apigw",
   aws_api_gateway_integration: "apigw",
   aws_cloudfront_origin_access_control: "cloudfront",
+  aws_appsync_graphql_api: "appsync",
+  aws_appsync_datasource: "appsync",
+  aws_appsync_function: "appsync",
+  aws_appsync_resolver: "appsync",
+  aws_cognito_user_pool: "cognito",
+  aws_cognito_user_pool_client: "cognito",
+  aws_cognito_identity_pool: "cognito",
 
   // Data / storage
   aws_s3_bucket: "s3",
@@ -60,6 +67,9 @@ const serviceMap: Record<string, string> = {
   aws_dynamodb_table: "dynamodb",
   aws_elasticache_cluster: "elasticache",
   aws_elasticache_replication_group: "elasticache",
+  aws_neptune_cluster: "neptune",
+  aws_elasticsearch_domain: "opensearch",
+  aws_athena_database: "athena",
 
   // Messaging / events
   aws_sqs_queue: "sqs",
@@ -82,6 +92,11 @@ const serviceMap: Record<string, string> = {
   // Observability
   aws_cloudwatch_log_group: "observability",
   aws_cloudwatch_metric_alarm: "observability",
+
+  // CI/CD / WAF
+  aws_codebuild_project: "codebuild",
+  aws_wafregional_web_acl: "waf",
+  aws_wafv2_web_acl: "waf",
 };
 
 type TfInputFile = { name: string; content: string };
@@ -214,6 +229,7 @@ function extractMetadata(block: string): Record<string, unknown> {
   pickString("api_id");
   pickString("integration_uri");
   pickString("target");
+  pickString("user_pool_id");
 
   return meta;
 }
@@ -383,6 +399,12 @@ function buildEdges(resources: ResourceDef[]): GraphEdge[] {
     if (res.type === "aws_apigatewayv2_stage" && res.body.api_id) {
       const apiId = maybeResourceId("aws_apigatewayv2_api", res.body.api_id, byId);
       if (apiId) edges.push({ from: apiId, to: fromId, relation: "has_stage" });
+    }
+
+    // AppSync -> Cognito (user pool)
+    if (res.type === "aws_appsync_graphql_api" && res.body.user_pool_id) {
+      const poolId = maybeResourceId("aws_cognito_user_pool", res.body.user_pool_id, byId);
+      if (poolId) edges.push({ from: fromId, to: poolId, relation: "auths_with" });
     }
 
     // Lambda -> VPC subnets/SG/KMS

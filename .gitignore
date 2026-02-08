@@ -1,6 +1,9 @@
 node_modules
 dist
 .env
+.env.local
+api/.env
+ui/.env.local
 npm-debug.log
 package-lock.json
 package-lock.json
@@ -11,3 +14,4 @@ terraform/.terraform/providers/
 terraform/.terraform/terraform.tfstate
 test-terraform
 scripts/ssm.sh
+scripts/common_commands.txt
