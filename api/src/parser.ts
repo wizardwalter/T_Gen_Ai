@@ -1,4 +1,5 @@
 import type { Graph, GraphEdge, GraphNode } from "./types";
+import { parse as parseHcl } from "@cdktf/hcl2json";
 
 type ResourceDef = {
   type: string;
@@ -101,23 +102,26 @@ const serviceMap: Record<string, string> = {
 
 type TfInputFile = { name: string; content: string };
 
-export function parseTerraformToGraph(files: TfInputFile[]): { graph: Graph; summary: string } {
+export async function parseTerraformToGraph(files: TfInputFile[]): Promise<{ graph: Graph; summary: string }> {
   try {
     const allResources: ResourceDef[] = [];
     const errors: string[] = [];
 
     for (const file of files) {
       let resources: ResourceDef[] = [];
-
       try {
-        resources = collectResourcesFromRegex(file.content);
+        resources = await collectResourcesFromHcl(file);
       } catch (err) {
         errors.push(`${file.name}: ${(err as Error).message}`);
       }
-
-      if (resources.length) {
-        allResources.push(...resources);
+      if (!resources.length) {
+        try {
+          resources = collectResourcesFromRegex(file.content);
+        } catch (err) {
+          errors.push(`${file.name}: ${(err as Error).message}`);
+        }
       }
+      if (resources.length) allResources.push(...resources);
     }
 
     if (!allResources.length) {
@@ -179,6 +183,32 @@ function collectResourcesFromRegex(content: string): ResourceDef[] {
     results.push({ type: String(type), name: String(name), body: meta });
   }
   return results;
+}
+
+async function collectResourcesFromHcl(file: TfInputFile): Promise<ResourceDef[]> {
+  ensureWebCrypto();
+  const json = await parseHcl(file.name, file.content);
+  const resources: ResourceDef[] = [];
+  const resourceBlocks = (json as any)?.resource ?? {};
+  for (const [type, named] of Object.entries(resourceBlocks)) {
+    if (!named || typeof named !== "object") continue;
+    for (const [name, blocks] of Object.entries(named as Record<string, any>)) {
+      const blockArray = Array.isArray(blocks) ? blocks : [blocks];
+      if (!blockArray.length) continue;
+      const body = blockArray[0] ?? {};
+      resources.push({ type: String(type), name: String(name), body });
+    }
+  }
+  return resources;
+}
+
+function ensureWebCrypto() {
+  const globalCrypto = (globalThis as any).crypto;
+  if (!globalCrypto || typeof globalCrypto.getRandomValues !== "function") {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { webcrypto } = require("crypto");
+    (globalThis as any).crypto = webcrypto;
+  }
 }
 
 function extractMetadata(block: string): Record<string, unknown> {
@@ -485,11 +515,14 @@ function normalizeArray(value: unknown): string[] {
 function maybeResourceId(type: string, value: string, byId: Map<string, ResourceDef>): string | null {
   if (!value) return null;
 
+  const cleaned = cleanRef(value);
+  if (!cleaned) return null;
+
   const stripName = (name: string) => name.replace(/\[\*\]/g, "").replace(/\[.*?\]/g, "");
 
   // If value looks like aws_type.name.suffix, parse it
-  if (value.includes(".")) {
-    const parts = value.split(".");
+  if (cleaned.includes(".")) {
+    const parts = cleaned.split(".");
     if (parts.length >= 2) {
       const refType = parts[0] && parts[0].startsWith("aws_") ? parts[0] : type;
       const refNameRaw = parts[1];
@@ -502,10 +535,28 @@ function maybeResourceId(type: string, value: string, byId: Map<string, Resource
   }
 
   // Try exact fallback with provided type
-  const candidate = `${type}.${stripName(value)}`;
+  const candidate = `${type}.${stripName(cleaned)}`;
   if (byId.has(candidate)) return candidate;
 
   return null;
+}
+
+function cleanRef(value: string): string | null {
+  let v = value.trim();
+  if (!v) return null;
+  if (v.startsWith("${") && v.endsWith("}")) {
+    v = v.slice(2, -1).trim();
+  }
+  // strip common wrappers like tolist(...), join(...), concat(...)
+  const wrapperMatch = v.match(/^[a-zA-Z_][a-zA-Z0-9_]*\\((.*)\\)$/);
+  if (wrapperMatch && wrapperMatch[1]) {
+    v = wrapperMatch[1].trim();
+  }
+  // drop quotes
+  v = v.replace(/^\"|\"$/g, "");
+  // ignore non-resource references
+  if (v.startsWith("var.") || v.startsWith("local.") || v.startsWith("data.")) return null;
+  return v;
 }
 
 function resolveByArn(type: string, arn: string, byId: Map<string, ResourceDef>): string | null {

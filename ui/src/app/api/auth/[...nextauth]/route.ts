@@ -10,10 +10,27 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      profile(profile) {
+        const first = (profile as { given_name?: string }).given_name;
+        const last = (profile as { family_name?: string }).family_name;
+        const fullName = [first, last].filter(Boolean).join(" ").trim();
+        return {
+          id: profile.sub,
+          name: fullName || profile.name,
+          email: profile.email,
+        };
+      },
     }),
     GitHubProvider({
       clientId: process.env.OAUTH_GITHUB_CLIENT_ID ?? "",
       clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET ?? "",
+      profile(profile) {
+        return {
+          id: profile.id?.toString(),
+          name: profile.name || profile.login,
+          email: profile.email,
+        };
+      },
     }),
   ],
   session: {
@@ -40,13 +57,10 @@ export const authOptions: NextAuthOptions = {
       if (session.user && token.sub) {
         const userRecord = (await prisma.user.findUnique({
           where: { id: token.sub },
-        })) as { id?: string; isSubscriber?: boolean; plan?: string | null; subscriptionStatus?: string | null } | null;
+          select: { id: true },
+        })) as { id?: string } | null;
 
-        (session.user as { id?: string; isSubscriber?: boolean; plan?: string | null; subscriptionStatus?: string | null }).id =
-          userRecord?.id ?? token.sub;
-        (session.user as { isSubscriber?: boolean }).isSubscriber = userRecord?.isSubscriber ?? false;
-        (session.user as { plan?: string | null }).plan = userRecord?.plan ?? null;
-        (session.user as { subscriptionStatus?: string | null }).subscriptionStatus = userRecord?.subscriptionStatus ?? null;
+        (session.user as { id?: string }).id = userRecord?.id ?? token.sub;
       }
       if (session.user && (token as { welcomeStatus?: string }).welcomeStatus) {
         (session.user as { welcomeStatus?: string }).welcomeStatus = (token as { welcomeStatus?: string }).welcomeStatus;

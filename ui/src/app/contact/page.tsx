@@ -10,7 +10,7 @@ export const metadata = {
 const contactOptions = [
   {
     title: "Support",
-    detail: "Questions about uploads, auth, or billing? We respond quickly.",
+    detail: "Questions about uploads or auth? We respond quickly.",
     action: "support@stackgenerate.com",
     href: "mailto:support@stackgenerate.com",
   },
@@ -60,7 +60,7 @@ export default function ContactPage() {
           <div className="mt-3 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/faq"
-              className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-800 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
+              className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-slate-500"
             >
               View FAQ
             </Link>
@@ -69,12 +69,6 @@ export default function ContactPage() {
               className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
             >
               Roadmap
-            </Link>
-            <Link
-              href="/subscribe"
-              className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-800 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
-            >
-              Subscribe
             </Link>
           </div>
         </div>

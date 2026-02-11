@@ -17,11 +17,11 @@ const faqs = [
   },
   {
     q: "Where does my data live?",
-    a: "Locally we use Postgres via Docker; in the cloud we target Aurora Postgres with Prisma migrations. Terraform files are only held in memory during parsing.",
+    a: "Terraform files are only held in memory during parsing. We store minimal account details (like email) to help with support and usage insights.",
   },
   {
     q: "Is there a token or credit system?",
-    a: "Yes. Non-subscribers draw from a token balance; subscribers get unlimited parsing. You can see your balance on the profile page.",
+    a: "Not currently. The focus is on making the core diagram experience fast and accurate first.",
   },
   {
     q: "Do you support other IaC formats?",
@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     q: "Can I self-host?",
-    a: "Self-hosting isn't supported. StackGenerate is delivered as a hosted service with managed auth, billing, and roadmap features.",
+    a: "Self-hosting isn't supported right now. Reach out if it's a must-have for your team.",
   },
 ];
 

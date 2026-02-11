@@ -39,7 +39,7 @@ export default function Home() {
             Read code &rarr; Render architecture
           </span>
           <h1 className="hero-title text-4xl font-semibold leading-tight sm:text-5xl">
-            Upload Terraform. Get a living architecture diagram.
+            Upload Terraform. Get a living architecture diagram for free.
           </h1>
           <p className="hero-sub mx-auto max-w-3xl text-base">
             We parse your IaC, understand resources and relationships, and sketch a clean system view.
@@ -138,40 +138,6 @@ export default function Home() {
           </p>
         </div>
 
-        <section className="mt-12 w-full rounded-3xl border border-slate-800/70 bg-slate-950/70 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.35)]">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-3 md:max-w-xl text-left">
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Watch the demo</p>
-              <h2 className="text-2xl font-semibold text-slate-50">See StackGenerate in 30 seconds</h2>
-              <p className="text-sm text-slate-300">
-                Upload Terraform, parse, and render a clean cloud diagram. Precise mouse movement, crisp overlays, and zero noise.
-                This demo is recorded from our UI so you know exactly what you get.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/auth/sign-up"
-                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_12px_36px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
-                >
-                  Try it yourself
-                </Link>
-                <Link
-                  href="/contact"
-                  className="rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:border-sky-500/70 hover:text-sky-200"
-                >
-                  Talk with us
-                </Link>
-              </div>
-            </div>
-            <div className="relative mt-4 flex w-full max-w-xl items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-[0_20px_60px_rgba(15,23,42,0.4)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.14),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(168,85,247,0.14),transparent_35%)]" />
-              <div className="relative aspect-video w-full">
-                <div className="flex h-full items-center justify-center text-sm text-slate-300">
-                  Demo video placeholder — drop in your 30s recording (webm/mp4) here.
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <SiteFooter />

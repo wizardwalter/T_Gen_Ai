@@ -3,7 +3,7 @@ import { SiteFooter } from "../components/site-footer";
 
 export const metadata = {
   title: "Roadmap | StackGenerate",
-  description: "See what is shipping next for StackGenerate: multi-cloud diagrams, account linking, billing, and more.",
+  description: "See what is shipping next for StackGenerate: multi-cloud diagrams, account linking, and more.",
 };
 
 const roadmapItems = [
@@ -13,9 +13,9 @@ const roadmapItems = [
     detail: "Link Google + GitHub from a profile page with explicit link intents, provider email verification, and session history.",
   },
   {
-    title: "Billing & subscriptions",
+    title: "Usage insights",
     status: "Building now",
-    detail: "Stripe-backed plans, token grants for free tiers, and usage visibility for teams.",
+    detail: "Lightweight usage metrics so you can see active users and diagram volume at a glance.",
   },
   {
     title: "Multi-cloud & Kubernetes",

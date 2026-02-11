@@ -26,13 +26,13 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: [
-      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "512x512" },
-      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "192x192" },
-      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "64x64" },
-      { url: "/tgenai_logo_favicon_ready.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-v2.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon-v2.png", type: "image/png", sizes: "192x192" },
+      { url: "/favicon-v2.png", type: "image/png", sizes: "64x64" },
+      { url: "/favicon-v2.png", type: "image/png", sizes: "32x32" },
     ],
-    shortcut: "/tgenai_logo_favicon_ready.png",
-    apple: "/tgenai_logo_favicon_ready.png",
+    shortcut: "/favicon-v2.png",
+    apple: "/favicon-v2.png",
   },
 };
 

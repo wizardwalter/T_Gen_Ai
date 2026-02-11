@@ -195,7 +195,9 @@ const UserNode = ({ data }: { data: { label: string } }) => (
   </div>
 );
 
-const nodeTypes = { aws: AwsNode, group: GroupNode, frame: FrameNode, user: UserNode };
+const GhostNode = () => <div className="h-2 w-2 opacity-0" />;
+
+const nodeTypes = { aws: AwsNode, group: GroupNode, frame: FrameNode, user: UserNode, ghost: GhostNode };
 
 const flowEdgeStyle = { stroke: "#e2e8f0", strokeWidth: 2.2 };
 const flowLabelBg = { fill: "#0f172a", fillOpacity: 0.75, color: "#e2e8f0" };
@@ -209,6 +211,9 @@ const publicLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#f8fafc" };
 const manualEdgeStyle = { stroke: "#38bdf8", strokeWidth: 2.4, strokeDasharray: "6 6" };
 const manualLabelBg = { fill: "#0f172a", fillOpacity: 0.85, color: "#38bdf8" };
 const manualLabelStyle = { fontSize: 10, fontWeight: 700, fill: "#38bdf8" };
+const infraEdgeStyle = { stroke: "#94a3b8", strokeWidth: 1.8, strokeDasharray: "4 6" };
+const infraLabelBg = { fill: "#0f172a", fillOpacity: 0.7, color: "#94a3b8" };
+const infraLabelStyle = { fontSize: 10, fontWeight: 600, fill: "#94a3b8" };
 const LANE_SPACING = 320;
 const ROW_SPACING = 150;
 const permissionHints = ["permission", "policy", "role", "attach", "access", "pull", "push", "ecr", "iam"];
@@ -223,19 +228,18 @@ const styleForRelation = (relation?: string) => {
 export default function UploadPage() {
   const { data: session } = useSession();
   const isAuthenticated = Boolean(session?.user);
-  const isSubscriber = session?.user && (session.user as { isSubscriber?: boolean }).isSubscriber === true;
   const [folderName, setFolderName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showInfra, setShowInfra] = useState(false);
+  const [showInfra] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [pickedNodes, setPickedNodes] = useState<string[]>([]);
   const [manualEdges, setManualEdges] = useState<Array<{ id: string; from: string; to: string; label?: string }>>([]);
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [manualEdits, setManualEdits] = useState<Record<string, { label?: string; service?: string; hidden?: boolean }>>({});
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const diagramRef = useRef<HTMLDivElement | null>(null);
-  const showPaywall = Boolean(result) && !isSubscriber;
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -262,6 +266,7 @@ export default function UploadPage() {
       setPickedNodes([]);
       setManualEdges([]);
       setManualPositions({});
+      setManualEdits({});
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -269,15 +274,6 @@ export default function UploadPage() {
     }
   };
 
-  const startCheckout = async () => {
-    const resp = await fetch("/api/billing/checkout", { method: "POST" });
-    if (!resp.ok) {
-      throw new Error("Checkout failed. Please try again.");
-    }
-    const data = (await resp.json()) as { url?: string };
-    if (!data.url) throw new Error("Checkout link missing.");
-    window.location.href = data.url;
-  };
 
   const handleNodeClick: NodeMouseHandler = (_event, node: Node) => {
     setSelectedNodeId(node.id);
@@ -354,6 +350,17 @@ export default function UploadPage() {
     }
   };
 
+  const toggleFullscreen = async () => {
+    const el = diagramRef.current;
+    if (!el) return;
+    const doc = document as any;
+    if (!doc.fullscreenElement) {
+      await el.requestFullscreen?.();
+    } else {
+      await doc.exitFullscreen?.();
+    }
+  };
+
   const flow = useMemo(() => {
     if (!result) return { nodes: [], edges: [], rawNodes: [], rawEdges: [], legendNodes: [] };
 
@@ -368,18 +375,29 @@ export default function UploadPage() {
       "aws_launch_template",
       "aws_iam_policy",
     ]);
-    const infraDetailServices = new Set<string>(["route53", "observability"]);
-    const supportiveServices = new Set<string>(["iam", "kms", "secrets", "ssm", "observability"]);
+    const infraDetailServices = new Set<string>([
+      "route53",
+      "observability",
+      "vpc",
+      "iam",
+      "kms",
+      "secrets",
+      "ssm",
+    ]);
+    const supportiveServices = new Set<string>(["iam", "kms", "secrets", "ssm", "observability", "vpc"]);
     const publicServices = new Set<string>(["route53", "cloudfront", "apigw", "elb", "s3"]);
     const publicRelationHints = ["public", "internet", "ingress", "internet-facing", "cdn"];
 
+    const legendNodes: any[] = [];
     const rawNodesAll = result.graph.nodes.filter((n) => {
       if (hiddenTypes.has(n.type)) return false;
-      if (!showInfra && infraDetailServices.has(n.service)) return false;
+      if (!showInfra && infraDetailServices.has(n.service)) {
+        legendNodes.push(n);
+        return false;
+      }
       return true;
     });
-    const displayNodes = rawNodesAll;
-    const legendNodes: any[] = [];
+    const displayNodes = rawNodesAll.filter((n) => !manualEdits[n.id]?.hidden);
 
     const endpoints = (e: any) => ({ from: e.from ?? e.source, to: e.to ?? e.target });
     const edgeKey = (e: any) => {
@@ -403,6 +421,8 @@ export default function UploadPage() {
     });
 
     const nodeById = new Map(displayNodes.map((n) => [n.id, n]));
+    const hiddenIds = new Set(legendNodes.map((n: any) => n.id));
+    const visibleIds = new Set(displayNodes.map((n: any) => n.id));
     const vpcMembership = new Map<string, string[]>();
     for (const e of rawEdges) {
       const target = nodeById.get(e.to);
@@ -448,10 +468,11 @@ export default function UploadPage() {
       .map((n) => ({ id: n.id, score: entryScore.get(n.id) ?? 0 }))
       .sort((a, b) => b.score - a.score);
     const topScore = scoredEntries[0]?.score ?? 0;
-    const entryIds =
+    const entryIdsRaw =
       topScore > 0
         ? scoredEntries.filter((e) => e.score === topScore).map((e) => e.id)
         : displayNodes.filter((n) => (indegree.get(n.id) ?? 0) === 0).map((n) => n.id);
+    const entryIds = entryIdsRaw.slice(0, 2);
     const entrySet = new Set(entryIds.length ? entryIds : displayNodes.map((n) => n.id));
 
     // Longest-path style leveling from entries, with cycle fallback.
@@ -515,6 +536,13 @@ export default function UploadPage() {
       return 2;
     };
 
+    // Enforce service-tier minimums so data stores don't land in the entry column.
+    for (const n of displayNodes) {
+      const rank = serviceRank(n.service, n.label ?? n.id);
+      const current = levels.get(n.id) ?? 0;
+      levels.set(n.id, Math.max(current, rank));
+    }
+
     // If everything collapsed into a single lane, spread by service category.
     const levelValues = new Set([...levels.values()]);
     if (levelValues.size <= 1) {
@@ -530,12 +558,13 @@ export default function UploadPage() {
       const lane = levels.get(n.id) ?? 0;
       const order = laneCounts[lane] ?? 0;
       laneCounts[lane] = order + 1;
+      const edit = manualEdits[n.id] ?? {};
       return {
         id: n.id ?? `node-${idx}`,
         type: "aws",
         data: {
-          label: n.label ?? n.id ?? `Node ${idx}`,
-          service: n.service ?? "generic",
+          label: edit.label ?? n.label ?? n.id ?? `Node ${idx}`,
+          service: edit.service ?? n.service ?? "generic",
           isPicked: pickedSet.has(n.id),
         },
         position: { x: lane * LANE_SPACING, y: order * ROW_SPACING },
@@ -551,6 +580,8 @@ export default function UploadPage() {
     const idToPosition = new Map(positionedWithOverrides.map((n) => [n.id, n.position]));
 
     const groupNodes: any[] = [];
+    const ghostNodes: any[] = [];
+    const ghostEdges: any[] = [];
     const extraNodes: any[] = [];
     const extraEdges: any[] = [];
 
@@ -635,6 +666,40 @@ export default function UploadPage() {
       });
     }
 
+    // Create annotation edges for hidden infra relationships.
+    const ghostCounts: Record<string, number> = {};
+    for (const e of rawEdges) {
+      const fromHidden = hiddenIds.has(e.from);
+      const toHidden = hiddenIds.has(e.to);
+      if (fromHidden === toHidden) continue;
+      const visibleId = fromHidden ? e.to : e.from;
+      if (!visibleIds.has(visibleId)) continue;
+      const basePos = idToPosition.get(visibleId);
+      if (!basePos) continue;
+      const count = ghostCounts[visibleId] ?? 0;
+      ghostCounts[visibleId] = count + 1;
+      const ghostId = `ghost-${visibleId}-${count}`;
+      ghostNodes.push({
+        id: ghostId,
+        type: "ghost",
+        position: { x: basePos.x + 140, y: basePos.y + count * 18 },
+        selectable: false,
+        draggable: false,
+      });
+      ghostEdges.push({
+        id: `ghost-edge-${visibleId}-${count}`,
+        source: visibleId,
+        target: ghostId,
+        label: e.relation ?? e.label ?? "infra",
+        type: "smoothstep",
+        style: infraEdgeStyle,
+        labelBgStyle: infraLabelBg,
+        labelStyle: infraLabelStyle,
+        animated: false,
+        markerEnd: { type: MarkerType.ArrowClosed, color: infraEdgeStyle.stroke },
+      });
+    }
+
     const laneSequence = [...new Set(positionedWithOverrides.map((n) => levels.get(n.id) ?? 0))].sort(
       (a, b) => a - b
     );
@@ -703,11 +768,11 @@ export default function UploadPage() {
         markerEnd: { type: MarkerType.ArrowClosed, color: manualEdgeStyle.stroke },
       }));
 
-    const fullEdges = [...edges, ...extraEdges, ...manualStyledEdges];
-    const allNodes = [...groupNodes, ...positionedWithOverrides, ...extraNodes];
+    const fullEdges = [...edges, ...extraEdges, ...manualStyledEdges, ...ghostEdges];
+    const allNodes = [...groupNodes, ...positionedWithOverrides, ...extraNodes, ...ghostNodes];
 
     return { nodes: allNodes, edges: fullEdges, rawNodes: displayNodes, rawEdges: [...rawEdges, ...manualEdges], legendNodes };
-  }, [result, showInfra, manualEdges, pickedNodes, manualPositions]);
+  }, [result, manualEdges, pickedNodes, manualPositions, manualEdits]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -726,7 +791,7 @@ export default function UploadPage() {
           </div>
           <Link
             href="/"
-            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 hover:border-slate-500"
+            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-50 hover:border-slate-500"
           >
             Back
           </Link>
@@ -753,7 +818,7 @@ export default function UploadPage() {
                     Drop a Terraform folder or click to browse
                   </p>
                   <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                    We'll read HCL, detect resources, and send a parsed graph to the backend.
+                    We'll read HCL, detect resources, and render a diagram. Folders must only contain .tf files.
                   </p>
                   <input
                     id="folder-input"
@@ -784,18 +849,12 @@ export default function UploadPage() {
                   )}
                 </label>
               </div>
-              <div className="mt-6 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+              <div className="mt-6 grid gap-3 text-sm text-slate-700 sm:grid-cols-1">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                     What we parse
                   </p>
                   <p className="mt-1">Modules, providers, resources, outputs.</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Destination
-                  </p>
-                  <p className="mt-1">Backend API for diagram synthesis.</p>
                 </div>
               </div>
               {uploading && (
@@ -810,63 +869,98 @@ export default function UploadPage() {
               )}
               {result && (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
-                    <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                      Parse summary
-                    </p>
-                    <p>{result.summary}</p>
-                    <p>
-                      Nodes: {result.graph.nodes.length} / Edges: {result.graph.edges.length}
-                    </p>
-                    <div className="text-xs text-slate-400">
-                      Files: {result.files.map((f) => f.name).join(", ")}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
-                        Diagram view
+                        Diagram tips
                       </p>
-                      <p className="text-slate-600">Toggle infra overlays like Route53/CloudFront/observability.</p>
+                      <p className="text-slate-600">
+                        Click two nodes to add a custom relation. Drag nodes to adjust layout.
+                      </p>
                     </div>
-                    <label className="inline-flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={showInfra}
-                        onChange={(e) => setShowInfra(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 bg-white text-sky-500 focus:ring-sky-500"
-                      />
-                      <span>Show infra details</span>
-                    </label>
+                    {selectedNodeId && (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3 text-xs text-slate-200 shadow-sm">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                          Edit selected node
+                        </p>
+                        <div className="mt-2 grid gap-3 md:grid-cols-3">
+                          <label className="flex flex-col gap-1">
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Label</span>
+                            <input
+                              value={manualEdits[selectedNodeId]?.label ?? ""}
+                              onChange={(e) =>
+                                setManualEdits((prev) => ({
+                                  ...prev,
+                                  [selectedNodeId]: {
+                                    ...prev[selectedNodeId],
+                                    label: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Override label"
+                              className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100 shadow-sm"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1">
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Service / Icon</span>
+                            <select
+                              value={manualEdits[selectedNodeId]?.service ?? ""}
+                              onChange={(e) =>
+                                setManualEdits((prev) => ({
+                                  ...prev,
+                                  [selectedNodeId]: {
+                                    ...prev[selectedNodeId],
+                                    service: e.target.value || undefined,
+                                  },
+                                }))
+                              }
+                              className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100 shadow-sm"
+                            >
+                              <option value="">Auto</option>
+                              {Object.keys(serviceIcons).map((key) => (
+                                <option key={key} value={key}>
+                                  {key}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <div className="flex flex-col gap-2 pt-4 md:pt-5">
+                            <button
+                              onClick={() =>
+                                setManualEdits((prev) => ({
+                                  ...prev,
+                                  [selectedNodeId]: {
+                                    ...prev[selectedNodeId],
+                                    hidden: true,
+                                  },
+                                }))
+                              }
+                              className="rounded-full border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] font-semibold text-slate-50 transition hover:border-rose-300"
+                            >
+                              Hide node
+                            </button>
+                            <button
+                              onClick={() =>
+                                setManualEdits((prev) => {
+                                  const next = { ...prev };
+                                  delete next[selectedNodeId];
+                                  return next;
+                                })
+                              }
+                              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-50 transition hover:border-slate-500"
+                            >
+                              Reset overrides
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 <div
                   ref={diagramRef}
-                  className="h-[520px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
+                  className="h-[640px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
                 >
-                  {showPaywall ? (
-                    <div className="relative flex h-full items-center justify-center rounded-2xl border border-slate-800/60 bg-slate-900/70 p-10 text-center">
-                      <div className="space-y-3">
-                        <p className="text-lg font-semibold text-slate-50">Subscribe to unlock this diagram</p>
-                        <p className="text-sm text-slate-300">
-                          Your graph is ready. Subscribe for $4.99/mo to view and download it securely.
-                        </p>
-                        <div className="flex flex-wrap items-center justify-center gap-3">
-                          <button
-                            onClick={() => startCheckout().catch((err) => setError(err.message))}
-                            className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-sm font-semibold text-slate-50 shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
-                          >
-                            Subscribe for $4.99/mo
-                          </button>
-                          <Link
-                            href="/"
-                            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 shadow-sm transition hover:border-slate-500"
-                          >
-                            Back home
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ) : flow.nodes.length ? (
+                  {flow.nodes.length ? (
                     <ReactFlow
                       nodes={flow.nodes}
                       edges={flow.edges}
@@ -885,7 +979,10 @@ export default function UploadPage() {
                       }}
                       onNodeClick={handleNodeClick}
                       onNodeDragStop={handleNodeDragStop}
-                      onPaneClick={() => setPickedNodes([])}
+                      onPaneClick={() => {
+                        setPickedNodes([]);
+                        setSelectedNodeId(null);
+                      }}
                       proOptions={{ hideAttribution: true }}
                     >
                       <Background gap={18} size={1} color="#e2e8f0" />
@@ -895,12 +992,20 @@ export default function UploadPage() {
                           <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                             Export
                           </p>
-                          <button
-                            onClick={() => exportPdf().catch((err) => setError(err.message))}
-                            className="mt-2 w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                          >
-                            Export PDF
-                          </button>
+                          <div className="mt-2 flex flex-col gap-2">
+                            <button
+                              onClick={() => exportPdf().catch((err) => setError(err.message))}
+                              className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                            >
+                              Export PDF
+                            </button>
+                            <button
+                              onClick={() => toggleFullscreen().catch((err) => setError(err.message))}
+                              className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                            >
+                              Full screen
+                            </button>
+                          </div>
                         </div>
                         {pickedNodes.length === 2 && (
                           <div className="rounded-2xl border border-slate-200 bg-white/95 p-3 text-xs text-slate-700 shadow-lg dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200">
@@ -913,14 +1018,14 @@ export default function UploadPage() {
                             <div className="mt-2 flex flex-wrap gap-2">
                               <button
                                 onClick={addManualRelation}
-                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                               >
                                 Add relation
                               </button>
                               <button
                                 onClick={clearManualRelations}
                                 disabled={manualEdges.length === 0}
-                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                               >
                                 Clear
                               </button>
@@ -1032,7 +1137,7 @@ export default function UploadPage() {
                 </Link>
                 <Link
                   href="/"
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition hover:border-slate-400 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-50 shadow-sm transition hover:border-slate-400 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
                 >
                   Back home
                 </Link>
@@ -1040,57 +1145,7 @@ export default function UploadPage() {
             </div>
           )}
         </div>
-        {isSubscriber && selectedNodeId && result && (
-          <div className="mt-10 w-full rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Selection</p>
-                <p className="text-base font-semibold text-slate-900 dark:text-slate-50">
-                  {flow.rawNodes.find((n: any) => n.id === selectedNodeId)?.label ?? selectedNodeId}
-                </p>
-              </div>
-              <button
-                className="text-xs text-slate-200 dark:text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                onClick={() => setSelectedNodeId(null)}
-              >
-                Clear
-              </button>
-            </div>
-            <div className="mt-3 grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Metadata</p>
-                <pre className="mt-1 max-h-32 overflow-auto rounded-lg bg-slate-100 p-3 text-xs text-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
-{JSON.stringify(
-  result.graph.nodes.find((n) => n.id === selectedNodeId)?.metadata ?? {},
-  null,
-  2
-)}
-                </pre>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Relations</p>
-                <div className="mt-1 space-y-1 text-xs text-slate-700 dark:text-slate-200">
-                  {flow.rawEdges
-                    .filter((e: any) => e.from === selectedNodeId || e.to === selectedNodeId)
-                    .slice(0, 10)
-                    .map((e: any, idx: number) => (
-                      <div key={`${e.id}-${idx}`} className="rounded-md bg-slate-950/70 px-3 py-2">
-                        <span className="text-sky-300">{e.from}</span>
-                        <span className="text-slate-500"> &rarr; {e.relation} &rarr; </span>
-                        <span className="text-emerald-300">{e.to}</span>
-                      </div>
-                    ))}
-                  {flow.rawEdges.filter((e: any) => e.from === selectedNodeId || e.to === selectedNodeId).length === 0 && (
-                    <div className="text-slate-200 dark:text-slate-500">No relations recorded.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-

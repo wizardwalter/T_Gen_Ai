@@ -78,7 +78,7 @@ app.get("/health/db", async (_req, res) => {
   }
 });
 
-app.post("/api/terraform/upload", upload.array("files", 50), (req, res) => {
+app.post("/api/terraform/upload", upload.array("files", 50), async (req, res) => {
   const files = (req.files as Express.Multer.File[]) ?? [];
 
   if (!files.length) {
@@ -97,7 +97,7 @@ app.post("/api/terraform/upload", upload.array("files", 50), (req, res) => {
       return { name: f.originalname, content };
     });
 
-    const { graph, summary } = parseTerraformToGraph(tfFiles);
+    const { graph, summary } = await parseTerraformToGraph(tfFiles);
     // Debug log for visibility
     // eslint-disable-next-line no-console
     console.log(

@@ -4,7 +4,6 @@ const footerLinks = [
   { href: "/faq", label: "FAQ" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/contact", label: "Contact" },
-  { href: "/subscribe", label: "Subscribe" },
   { href: "/profile", label: "Profile" },
 ];
 
@@ -33,6 +32,14 @@ export function SiteFooter() {
               {item.label}
             </Link>
           ))}
+          <a
+            href="https://buymeacoffee.com/stackgenerate"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-700 transition hover:text-sky-500 dark:text-slate-300 dark:hover:text-sky-300"
+          >
+            Buy me a coffee
+          </a>
           <a
             href="mailto:support@stackgenerate.com"
             className="text-slate-700 transition hover:text-sky-500 dark:text-slate-300 dark:hover:text-sky-300"

@@ -9,7 +9,6 @@ const navLinks = [
   { href: "/faq", label: "FAQ" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/contact", label: "Contact" },
-  { href: "/subscribe", label: "Subscribe" },
 ];
 
 export function SiteHeader() {
@@ -20,10 +19,10 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-slate-100">
         <Link href="/" className="flex items-center gap-3 transition hover:opacity-90">
           <Image
-            src="/tgenai_logo.png"
+            src="/logo-v2.png"
             alt="StackGenerate logo"
-            width={60}
-            height={60}
+            width={84}
+            height={84}
             className="drop-shadow-[0_0_35px_rgba(125,211,252,0.35)]"
             priority
           />
@@ -31,7 +30,7 @@ export function SiteHeader() {
             <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">
               Terraform Diagrammer
             </p>
-            <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+            <p className="text-xl font-semibold text-slate-900 dark:text-slate-50">
               StackGenerate
             </p>
           </div>
@@ -51,20 +50,28 @@ export function SiteHeader() {
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href="https://buymeacoffee.com/stackgenerate"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-50 shadow-sm transition hover:border-sky-500/60 hover:text-sky-200 sm:inline-flex"
+            >
+              Buy me a coffee
+            </a>
             {session?.user ? (
               <>
                 <Link
                   href="/upload"
                   className="rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:border-sky-500/70 hover:text-sky-200 hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
                 >
-                  Upload
+                  Create
                 </Link>
               </>
             ) : (
               <>
                 <Link
                   href="/auth/sign-in"
-                  className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-800 shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500"
+                  className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-50 shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-slate-500"
                 >
                   Sign in
                 </Link>
