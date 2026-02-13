@@ -37,3 +37,15 @@ resource "aws_s3_bucket_policy" "icons_read" {
 
   depends_on = [aws_s3_bucket_public_access_block.icons]
 }
+
+resource "aws_s3_bucket_cors_configuration" "icons" {
+  bucket = aws_s3_bucket.icons.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}

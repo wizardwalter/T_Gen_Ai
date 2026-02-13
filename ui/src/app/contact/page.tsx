@@ -50,7 +50,7 @@ export default function ContactPage() {
             >
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{item.title}</p>
               <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{item.detail}</p>
-              <p className="mt-4 text-sm font-semibold text-sky-600 dark:text-sky-300">{item.action}</p>
+              <p className="mt-4 text-sm font-semibold text-white">{item.action}</p>
             </a>
           ))}
         </div>
@@ -60,13 +60,13 @@ export default function ContactPage() {
           <div className="mt-3 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/faq"
-              className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-slate-500"
+              className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-white shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:border-slate-500"
             >
               View FAQ
             </Link>
             <Link
               href="/roadmap"
-              className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+              className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
             >
               Roadmap
             </Link>

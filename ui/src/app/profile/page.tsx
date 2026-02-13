@@ -85,8 +85,8 @@ function LinkButton({
     "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition";
   const styles =
     variant === "primary"
-      ? "bg-gradient-to-r from-sky-500 to-violet-500 text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] hover:from-sky-400 hover:to-violet-400"
-      : "border border-slate-300 bg-white/80 text-slate-50 shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-slate-500";
+      ? "bg-gradient-to-r from-sky-500 to-violet-500 text-white shadow-[0_10px_30px_rgba(56,189,248,0.25)] hover:from-sky-400 hover:to-violet-400"
+      : "border border-slate-300 bg-white/80 text-white shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:border-slate-500";
 
   return (
     <Link href={href} className={`${base} ${styles}`}>

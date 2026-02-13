@@ -129,7 +129,7 @@ export default function Home() {
         <div className="flex flex-col items-center gap-3">
           <Link
             href={ctaHref}
-            className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-semibold text-slate-50 shadow-[0_20px_60px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+            className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_60px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
           >
             Start now
           </Link>

@@ -104,6 +104,13 @@ const serviceIcons: Record<string, string> = {
 
 type FlowNodeData = { label: string; service: string; isPicked?: boolean };
 
+const handleIconError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+  const target = event.currentTarget;
+  if (target.dataset.fallbackApplied) return;
+  target.dataset.fallbackApplied = "1";
+  target.src = serviceIcons.generic;
+};
+
 const AwsNode = ({ data }: { data: FlowNodeData }) => {
   const color = serviceColors[data.service] ?? serviceColors.generic;
   const icon = serviceIcons[data.service] ?? serviceIcons.generic;
@@ -142,7 +149,13 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
         isConnectable={false}
       />
       <div className="flex h-10 w-10 items-center justify-center rounded-lg border" style={{ backgroundColor: `${color}15`, borderColor: `${color}55` }}>
-        <img src={icon} alt={data.label} className="h-7 w-7 opacity-90" />
+        <img
+          src={icon}
+          alt={data.label}
+          className="h-7 w-7 opacity-90"
+          crossOrigin="anonymous"
+          onError={handleIconError}
+        />
       </div>
       <div className="min-w-[180px] max-w-[260px] whitespace-normal break-words text-xs text-slate-800 dark:text-slate-100">
         <div className="font-semibold leading-tight">{data.label}</div>
@@ -157,7 +170,13 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
 const GroupNode = ({ data }: { data: { label: string } }) => (
   <div className="pointer-events-none h-full w-full rounded-2xl border border-dashed border-sky-300 bg-transparent p-2 text-[11px] uppercase tracking-[0.2em] text-slate-600 dark:border-sky-500/50 dark:text-slate-200">
     <div className="flex items-center gap-2 opacity-70">
-      <img src={serviceIcons.vpc} alt="VPC" className="h-4 w-4" />
+      <img
+        src={serviceIcons.vpc}
+        alt="VPC"
+        className="h-4 w-4"
+        crossOrigin="anonymous"
+        onError={handleIconError}
+      />
       <span>{data.label}</span>
     </div>
   </div>
@@ -240,6 +259,8 @@ export default function UploadPage() {
   const [manualEdits, setManualEdits] = useState<Record<string, { label?: string; service?: string; hidden?: boolean }>>({});
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const diagramRef = useRef<HTMLDivElement | null>(null);
+  const [relationModalOpen, setRelationModalOpen] = useState(false);
+  const [relationLabel, setRelationLabel] = useState("custom");
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -267,6 +288,7 @@ export default function UploadPage() {
       setManualEdges([]);
       setManualPositions({});
       setManualEdits({});
+      setRelationModalOpen(false);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -276,11 +298,17 @@ export default function UploadPage() {
 
 
   const handleNodeClick: NodeMouseHandler = (_event, node: Node) => {
-    setSelectedNodeId(node.id);
     setPickedNodes((prev) => {
-      const next = prev.filter((id) => id !== node.id);
-      next.push(node.id);
-      return next.slice(-2);
+      if (prev.includes(node.id)) {
+        const next = prev.filter((id) => id !== node.id);
+        if (selectedNodeId === node.id) {
+          setSelectedNodeId(next[0] ?? null);
+        }
+        return next;
+      }
+      const next = [...prev, node.id].slice(-2);
+      setSelectedNodeId(node.id);
+      return next;
     });
   };
 
@@ -298,7 +326,17 @@ export default function UploadPage() {
     if (pickedNodes.length < 2) return;
     const [from, to] = pickedNodes;
     if (!from || !to || from === to) return;
-    const label = window.prompt("Relation label", "custom") ?? "custom";
+    setRelationLabel("custom");
+    setRelationModalOpen(true);
+  };
+
+  const clearManualRelations = () => setManualEdges([]);
+
+  const confirmManualRelation = () => {
+    if (pickedNodes.length < 2) return;
+    const [from, to] = pickedNodes;
+    if (!from || !to || from === to) return;
+    const label = (relationLabel || "custom").trim() || "custom";
     const id = `manual-${from}-${to}-${Date.now()}`;
     setManualEdges((prev) => {
       if (prev.some((e) => e.from === from && e.to === to && (e.label ?? "custom") === label)) {
@@ -306,9 +344,8 @@ export default function UploadPage() {
       }
       return [...prev, { id, from, to, label }];
     });
+    setRelationModalOpen(false);
   };
-
-  const clearManualRelations = () => setManualEdges([]);
 
   const exportPdf = async () => {
     if (!reactFlowInstance || !diagramRef.current) return;
@@ -316,34 +353,56 @@ export default function UploadPage() {
     if (!nodes.length) return;
 
     const bounds = getNodesBounds(nodes);
-    const padding = 120;
-    const width = Math.max(bounds.width + padding * 2, 1200);
-    const height = Math.max(bounds.height + padding * 2, 800);
+    const padding = 140;
+    const rawWidth = Math.max(bounds.width + padding * 2, 900);
+    const rawHeight = Math.max(bounds.height + padding * 2, 700);
+    const maxDim = 2400;
+    const scale = Math.min(maxDim / rawWidth, maxDim / rawHeight, 1);
+    const width = Math.round(rawWidth * scale);
+    const height = Math.round(rawHeight * scale);
+
     const viewport = getViewportForBounds(bounds, width, height, 0.2, 2, 1);
     const prevViewport = reactFlowInstance.getViewport?.();
 
     await reactFlowInstance.setViewport?.(viewport, { duration: 0 });
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     const viewportEl = diagramRef.current.querySelector(".react-flow__viewport") as HTMLElement | null;
     if (!viewportEl) return;
 
-    const dataUrl = await toPng(viewportEl, {
-      backgroundColor: "#0b1220",
-      width,
-      height,
-      style: {
-        width: `${width}px`,
-        height: `${height}px`,
-      },
-    });
+    try {
+      const dataUrl = await toPng(viewportEl, {
+        backgroundColor: "#0b1220",
+        width,
+        height,
+        pixelRatio: 2,
+        cacheBust: true,
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+        },
+      });
 
-    const pdf = new jsPDF({
-      orientation: width >= height ? "landscape" : "portrait",
-      unit: "px",
-      format: [width, height],
-    });
-    pdf.addImage(dataUrl, "PNG", 0, 0, width, height);
-    pdf.save("architecture-diagram.pdf");
+      const pdf = new jsPDF({
+        orientation: width >= height ? "landscape" : "portrait",
+        unit: "px",
+        format: [width, height],
+      });
+      pdf.addImage(dataUrl, "PNG", 0, 0, width, height);
+      const pdfBlob = pdf.output("blob");
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "architecture-diagram.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError("PDF export failed. If you use external icons, ensure they allow CORS for export.");
+      // eslint-disable-next-line no-console
+      console.error("[exportPdf] failed", err);
+    }
 
     if (prevViewport) {
       await reactFlowInstance.setViewport?.(prevViewport, { duration: 0 });
@@ -791,7 +850,7 @@ export default function UploadPage() {
           </div>
           <Link
             href="/"
-            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-50 hover:border-slate-500"
+            className="rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-white hover:border-slate-500"
           >
             Back
           </Link>
@@ -869,13 +928,13 @@ export default function UploadPage() {
               )}
               {result && (
                 <div className="mt-4 space-y-4">
-                  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
+                  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-white shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-300">
                         Diagram tips
                       </p>
-                      <p className="text-slate-600">
-                        Click two nodes to add a custom relation. Drag nodes to adjust layout.
+                      <p className="text-slate-200">
+                        Click one node to edit its name or icon. Drag to move. Click a second node to add a custom relation.
                       </p>
                     </div>
                     {selectedNodeId && (
@@ -883,6 +942,25 @@ export default function UploadPage() {
                         <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
                           Edit selected node
                         </p>
+                        <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-200">
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800/70">
+                            <img
+                              src={
+                                serviceIcons[manualEdits[selectedNodeId]?.service ?? flow.rawNodes.find((n: any) => n.id === selectedNodeId)?.service ?? "generic"] ??
+                                serviceIcons.generic
+                              }
+                              alt="Selected icon"
+                              className="h-4 w-4"
+                              crossOrigin="anonymous"
+                              onError={handleIconError}
+                            />
+                          </span>
+                          <span className="font-semibold">
+                            {manualEdits[selectedNodeId]?.label ??
+                              flow.rawNodes.find((n: any) => n.id === selectedNodeId)?.label ??
+                              selectedNodeId}
+                          </span>
+                        </div>
                         <div className="mt-2 grid gap-3 md:grid-cols-3">
                           <label className="flex flex-col gap-1">
                             <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Label</span>
@@ -935,7 +1013,7 @@ export default function UploadPage() {
                                   },
                                 }))
                               }
-                              className="rounded-full border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] font-semibold text-slate-50 transition hover:border-rose-300"
+                              className="rounded-full border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:border-rose-300"
                             >
                               Hide node
                             </button>
@@ -947,7 +1025,7 @@ export default function UploadPage() {
                                   return next;
                                 })
                               }
-                              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-50 transition hover:border-slate-500"
+                              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:border-slate-500"
                             >
                               Reset overrides
                             </button>
@@ -958,8 +1036,42 @@ export default function UploadPage() {
                   </div>
                 <div
                   ref={diagramRef}
-                  className="h-[640px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
+                  className="relative h-[640px] rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-200 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
                 >
+                  {relationModalOpen && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-slate-950/70 p-4">
+                      <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Add relation</p>
+                        <p className="mt-2 text-xs text-slate-300">
+                          {flow.rawNodes.find((n: any) => n.id === pickedNodes[0])?.label ?? pickedNodes[0]} →
+                          {flow.rawNodes.find((n: any) => n.id === pickedNodes[1])?.label ?? pickedNodes[1]}
+                        </p>
+                        <label className="mt-3 flex flex-col gap-1">
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Relation label</span>
+                          <input
+                            value={relationLabel}
+                            onChange={(e) => setRelationLabel(e.target.value)}
+                            className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100"
+                            placeholder="custom"
+                          />
+                        </label>
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setRelationModalOpen(false)}
+                            className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:border-slate-500"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={confirmManualRelation}
+                            className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_12px_36px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+                          >
+                            Add relation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {flow.nodes.length ? (
                     <ReactFlow
                       nodes={flow.nodes}
@@ -982,6 +1094,7 @@ export default function UploadPage() {
                       onPaneClick={() => {
                         setPickedNodes([]);
                         setSelectedNodeId(null);
+                        setRelationModalOpen(false);
                       }}
                       proOptions={{ hideAttribution: true }}
                     >
@@ -995,13 +1108,13 @@ export default function UploadPage() {
                           <div className="mt-2 flex flex-col gap-2">
                             <button
                               onClick={() => exportPdf().catch((err) => setError(err.message))}
-                              className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                              className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             >
                               Export PDF
                             </button>
                             <button
                               onClick={() => toggleFullscreen().catch((err) => setError(err.message))}
-                              className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                              className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             >
                               Full screen
                             </button>
@@ -1018,14 +1131,14 @@ export default function UploadPage() {
                             <div className="mt-2 flex flex-wrap gap-2">
                               <button
                                 onClick={addManualRelation}
-                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                               >
                                 Add relation
                               </button>
                               <button
                                 onClick={clearManualRelations}
                                 disabled={manualEdges.length === 0}
-                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-50 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                               >
                                 Clear
                               </button>
@@ -1064,6 +1177,8 @@ export default function UploadPage() {
                                 src={serviceIcons[n.service] ?? serviceIcons.generic}
                                 alt={n.label}
                                 className="h-6 w-6"
+                                crossOrigin="anonymous"
+                                onError={handleIconError}
                               />
                             </span>
                             <span className="flex min-w-0 flex-1 flex-col text-slate-100">
@@ -1131,13 +1246,13 @@ export default function UploadPage() {
               <div className="flex gap-3">
                 <Link
                   href="/auth/sign-in"
-                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-sm font-semibold text-slate-50 shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/"
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-50 shadow-sm transition hover:border-slate-400 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-white shadow-sm transition hover:border-slate-400 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                 >
                   Back home
                 </Link>

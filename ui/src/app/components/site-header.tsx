@@ -42,7 +42,7 @@ export function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-full border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs font-semibold text-slate-100 shadow-sm transition hover:border-sky-500/70 hover:text-sky-200 hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
+                className="rounded-full border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:border-sky-500/70 hover:text-white hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
               >
                 {item.label}
               </Link>
@@ -50,19 +50,11 @@ export function SiteHeader() {
           </div>
 
           <div className="flex items-center gap-2">
-            <a
-              href="https://buymeacoffee.com/stackgenerate"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-50 shadow-sm transition hover:border-sky-500/60 hover:text-sky-200 sm:inline-flex"
-            >
-              Buy me a coffee
-            </a>
             {session?.user ? (
               <>
                 <Link
                   href="/upload"
-                  className="rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:border-sky-500/70 hover:text-sky-200 hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
+                  className="rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:border-sky-500/70 hover:text-white hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
                 >
                   Create
                 </Link>
@@ -71,13 +63,13 @@ export function SiteHeader() {
               <>
                 <Link
                   href="/auth/sign-in"
-                  className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-slate-50 shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:hover:border-slate-500"
+                  className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm text-white shadow-sm hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:border-slate-500"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/auth/sign-up"
-                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-slate-50 shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
                 >
                   Sign up
                 </Link>

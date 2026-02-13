@@ -52,6 +52,16 @@ a {
   color: var(--accent);
 }
 
+a.rounded-full,
+button.rounded-full {
+  color: #ffffff !important;
+}
+
+a.rounded-full:hover,
+button.rounded-full:hover {
+  color: #ffffff !important;
+}
+
 ::selection {
   background: rgba(168, 85, 247, 0.28);
   color: #f8fafc;
