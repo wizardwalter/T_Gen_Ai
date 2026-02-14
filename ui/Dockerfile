@@ -9,6 +9,7 @@ RUN npm install --include=dev
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache openssl1.1-compat
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_BASE
 ARG NEXTAUTH_URL
@@ -25,6 +26,7 @@ RUN npm prune --omit=dev
 
 FROM node:20-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache openssl1.1-compat
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
