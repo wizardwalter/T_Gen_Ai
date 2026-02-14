@@ -19,14 +19,6 @@ import "reactflow/dist/style.css";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 
-const rawApiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
-// Normalize: drop trailing slash and a trailing "/api" if it was included in the secret,
-// so we don't end up calling /api/api/...
-const apiBaseTrimmed = rawApiBase.replace(/\/+$/, "");
-const API_BASE = apiBaseTrimmed.endsWith("/api")
-  ? apiBaseTrimmed.slice(0, -4)
-  : apiBaseTrimmed;
-
 type UploadResult = {
   files: { name: string; size: number; mimetype: string }[];
   summary: string;
@@ -273,7 +265,7 @@ export default function UploadPage() {
     try {
       const form = new FormData();
       files.forEach((file) => form.append("files", file));
-      const resp = await fetch(`${API_BASE}/api/terraform/upload`, {
+      const resp = await fetch("/api/terraform/upload", {
         method: "POST",
         body: form,
       });

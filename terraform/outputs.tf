@@ -13,11 +13,6 @@ output "cloudfront_aliases" {
   value       = aws_cloudfront_distribution.ui.aliases
 }
 
-output "ui_bucket_name" {
-  description = "S3 bucket for the UI static site"
-  value       = aws_s3_bucket.ui.bucket
-}
-
 output "api_ecr_repository_url" {
   description = "ECR repository URL for the API image"
   value       = aws_ecr_repository.api.repository_url
@@ -28,14 +23,29 @@ output "ui_ecr_repository_url" {
   value       = aws_ecr_repository.ui.repository_url
 }
 
-output "app_host_eip" {
-  description = "Public IP for the app host EC2"
-  value       = aws_eip.app_host.public_ip
+output "alb_dns_name" {
+  description = "DNS name for the application load balancer"
+  value       = aws_lb.app.dns_name
 }
 
-output "app_host_instance_id" {
-  description = "Instance ID for the app host EC2"
-  value       = aws_instance.app_host.id
+output "alb_zone_id" {
+  description = "Zone ID for the application load balancer"
+  value       = aws_lb.app.zone_id
+}
+
+output "ecs_cluster_name" {
+  description = "ECS cluster name"
+  value       = aws_ecs_cluster.app.name
+}
+
+output "ecs_ui_service_name" {
+  description = "ECS UI service name"
+  value       = aws_ecs_service.ui.name
+}
+
+output "ecs_api_service_name" {
+  description = "ECS API service name"
+  value       = aws_ecs_service.api.name
 }
 
 output "icons_bucket_name" {

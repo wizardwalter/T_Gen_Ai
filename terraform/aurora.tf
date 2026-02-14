@@ -20,15 +20,15 @@ resource "aws_db_subnet_group" "aurora" {
 
 resource "aws_security_group" "aurora" {
   name        = "${var.project_name}-aurora-sg"
-  description = "Allow DB access from app host"
+  description = "Allow DB access from ECS tasks"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description     = "App host to Aurora"
+    description     = "ECS tasks to Aurora"
     from_port       = var.db_port
     to_port         = var.db_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.app_host.id]
+    security_groups = [aws_security_group.ecs_tasks.id]
   }
 
   egress {

@@ -40,21 +40,10 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
-variable "host_instance_type" {
-  description = "EC2 instance type for the app host"
+variable "alb_certificate_arn" {
+  description = "ACM certificate ARN (in-region) for the ALB HTTPS listener"
   type        = string
-  default     = "t3.small"
-}
-
-variable "host_cpu_credit_mode" {
-  description = "CPU credit option for burstable instances. Use unlimited to avoid throttling under sustained load."
-  type        = string
-  default     = "unlimited"
-
-  validation {
-    condition     = contains(["standard", "unlimited"], var.host_cpu_credit_mode)
-    error_message = "host_cpu_credit_mode must be standard or unlimited"
-  }
+  default     = ""
 }
 
 variable "ui_container_port" {
@@ -69,6 +58,18 @@ variable "api_container_port" {
   default     = 4000
 }
 
+variable "api_domain_name" {
+  description = "Domain name for the API (e.g., api.stackgenerate.com)"
+  type        = string
+  default     = ""
+}
+
+variable "ui_domain_names" {
+  description = "Domain names for the UI on the ALB (e.g., www.stackgenerate.com)"
+  type        = list(string)
+  default     = []
+}
+
 variable "nextauth_url" {
   description = "NEXTAUTH_URL for the UI container"
   type        = string
@@ -77,6 +78,24 @@ variable "nextauth_url" {
 
 variable "next_public_api_base" {
   description = "Public API base URL for the UI container"
+  type        = string
+  default     = ""
+}
+
+variable "api_base" {
+  description = "Server-side API base URL for the UI proxy (e.g., https://api.stackgenerate.com)"
+  type        = string
+  default     = ""
+}
+
+variable "api_shared_secret" {
+  description = "Shared secret header value required by the API"
+  type        = string
+  sensitive   = true
+}
+
+variable "next_public_icon_base" {
+  description = "Public icon base URL for the UI container"
   type        = string
   default     = ""
 }
@@ -111,10 +130,64 @@ variable "nextauth_secret" {
   default     = ""
 }
 
-variable "canonical_hostname" {
-  description = "Canonical hostname for redirects (e.g., www.stackgenerate.com). Leave blank to disable apex->www redirect."
-  type        = string
-  default     = ""
+variable "ui_task_cpu" {
+  description = "CPU units for the UI task"
+  type        = number
+  default     = 256
+}
+
+variable "ui_task_memory" {
+  description = "Memory (MiB) for the UI task"
+  type        = number
+  default     = 512
+}
+
+variable "api_task_cpu" {
+  description = "CPU units for the API task"
+  type        = number
+  default     = 256
+}
+
+variable "api_task_memory" {
+  description = "Memory (MiB) for the API task"
+  type        = number
+  default     = 512
+}
+
+variable "ui_desired_count" {
+  description = "Desired count for the UI service"
+  type        = number
+  default     = 1
+}
+
+variable "ui_min_count" {
+  description = "Minimum count for the UI service autoscaling"
+  type        = number
+  default     = 1
+}
+
+variable "ui_max_count" {
+  description = "Maximum count for the UI service autoscaling"
+  type        = number
+  default     = 3
+}
+
+variable "api_desired_count" {
+  description = "Desired count for the API service"
+  type        = number
+  default     = 1
+}
+
+variable "api_min_count" {
+  description = "Minimum count for the API service autoscaling"
+  type        = number
+  default     = 1
+}
+
+variable "api_max_count" {
+  description = "Maximum count for the API service autoscaling"
+  type        = number
+  default     = 3
 }
 
 variable "db_name" {

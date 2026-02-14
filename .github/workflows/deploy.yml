@@ -16,9 +16,14 @@ jobs:
       AWS_REGION: us-east-1
       TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
       TF_VAR_cloudfront_domain_names: ${{ secrets.CLOUDFRONT_DOMAIN_NAMES }}
-      TF_VAR_canonical_hostname: ${{ secrets.TF_VAR_CANONICAL_HOSTNAME }}
+      TF_VAR_alb_certificate_arn: ${{ secrets.ALB_CERTIFICATE_ARN }}
+      TF_VAR_api_domain_name: ${{ secrets.API_DOMAIN_NAME }}
+      TF_VAR_ui_domain_names: ${{ secrets.UI_DOMAIN_NAMES }}
       TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
       TF_VAR_next_public_api_base: ${{ secrets.NEXT_PUBLIC_API_BASE }}
+      TF_VAR_api_base: ${{ secrets.API_BASE }}
+      TF_VAR_api_shared_secret: ${{ secrets.API_SHARED_SECRET }}
+      TF_VAR_next_public_icon_base: ${{ secrets.NEXT_PUBLIC_ICON_BASE }}
       TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
       TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
@@ -34,7 +39,7 @@ jobs:
       NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
       OAUTH_GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
       OAUTH_GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
-      NEXT_PUBLIC_ICON_BASE: ${{secrets.NEXT_PUBLIC_ICON_BASE}}
+      NEXT_PUBLIC_ICON_BASE: ${{ secrets.NEXT_PUBLIC_ICON_BASE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,9 +70,11 @@ jobs:
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "API_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api" >> $GITHUB_ENV
-          echo "TF_VAR_api_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api:latest" >> $GITHUB_ENV
           echo "UI_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui" >> $GITHUB_ENV
-          echo "TF_VAR_ui_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui:latest" >> $GITHUB_ENV
+          IMAGE_TAG="${GITHUB_SHA::7}"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "TF_VAR_api_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-api:${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "TF_VAR_ui_image=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aidevops-ui:${IMAGE_TAG}" >> $GITHUB_ENV
 
       - name: Terraform apply (create ECR first)
         working-directory: terraform
@@ -80,8 +87,8 @@ jobs:
 
       - name: Build and push API image
         run: |
-          docker build -t $API_REPO:latest api
-          docker push $API_REPO:latest
+          docker build -t $API_REPO:${IMAGE_TAG} api
+          docker push $API_REPO:${IMAGE_TAG}
 
       - name: Build and push UI image
         run: |
@@ -89,172 +96,23 @@ jobs:
             --build-arg NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE} \
             --build-arg NEXTAUTH_URL=${NEXTAUTH_URL} \
             --build-arg NEXT_PUBLIC_ICON_BASE=${NEXT_PUBLIC_ICON_BASE} \
-            -t $UI_REPO:latest ui
-          docker push $UI_REPO:latest
+            -t $UI_REPO:${IMAGE_TAG} ui
+          docker push $UI_REPO:${IMAGE_TAG}
 
       - name: Terraform Apply
         working-directory: terraform
         run: terraform apply -auto-approve
 
-      - name: Fetch outputs for UI deploy
+      - name: Fetch outputs for ECS services
         working-directory: terraform
         run: |
-          echo "CF_DIST_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_ENV
-          echo "APP_HOST_INSTANCE_ID=$(terraform output -raw app_host_instance_id)" >> $GITHUB_ENV
+          echo "ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_ENV
+          echo "ECS_UI_SERVICE=$(terraform output -raw ecs_ui_service_name)" >> $GITHUB_ENV
+          echo "ECS_API_SERVICE=$(terraform output -raw ecs_api_service_name)" >> $GITHUB_ENV
 
-      - name: Ensure app host running
+      - name: Wait for ECS services to stabilize
         run: |
-          set -euo pipefail
-          INSTANCE_ID="${APP_HOST_INSTANCE_ID:-}"
-          REGION="${AWS_REGION}"
-
-          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "null" ]; then
-            echo "No app host instance id found; skipping start."
-            exit 0
-          fi
-
-          STATE=$(aws ec2 describe-instances \
-            --instance-ids "$INSTANCE_ID" \
-            --region "$REGION" \
-            --query 'Reservations[0].Instances[0].State.Name' \
-            --output text 2>/dev/null || true)
-
-          if [ -z "$STATE" ]; then
-            echo "Instance $INSTANCE_ID not found; skipping."
-            exit 0
-          fi
-
-          if [ "$STATE" = "running" ]; then
-            echo "Instance already running."
-            exit 0
-          fi
-
-          if [ "$STATE" = "pending" ]; then
-            echo "Instance pending; waiting for running/state checks..."
-            aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
-            aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
-            exit 0
-          fi
-
-          if [ "$STATE" = "stopping" ]; then
-            echo "Instance stopping; waiting for stopped state before starting..."
-            aws ec2 wait instance-stopped --instance-ids "$INSTANCE_ID" --region "$REGION"
-          fi
-
-          echo "Starting instance $INSTANCE_ID..."
-          aws ec2 start-instances --instance-ids "$INSTANCE_ID" --region "$REGION"
-          echo "Waiting for instance to pass status checks..."
-          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
-          aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
-          echo "Instance is running."
-
-      - name: Wait for app host ready
-        run: |
-          set -e
-          INSTANCE_ID="${APP_HOST_INSTANCE_ID}"
-          REGION="${AWS_REGION}"
-          echo "Waiting for instance $INSTANCE_ID to pass status checks..."
-          aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region "$REGION"
-          echo "Waiting for SSM ping..."
-          for i in {1..72}; do
-            PING=$(aws ssm describe-instance-information \
-              --filters Key=InstanceIds,Values="$INSTANCE_ID" \
-              --region "$REGION" \
-              --query 'InstanceInformationList[0].PingStatus' --output text || true)
-            if [ "$PING" = "Online" ]; then
-              echo "SSM Online"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "SSM not online after wait; dumping instance and SSM info for debugging"
-          aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" --query 'Reservations[0].Instances[0].State.Name'
-          aws ssm describe-instance-information \
-            --filters Key=InstanceIds,Values="$INSTANCE_ID" \
-            --region "$REGION" \
-            --query 'InstanceInformationList[0]'
-          exit 1
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Restart app host via SSM
-        run: |
-          set -euo pipefail
-          INSTANCE_ID="${APP_HOST_INSTANCE_ID}"
-          REGION="${AWS_REGION}"
-          UI_IMAGE="${UI_REPO}:latest"
-          API_IMAGE="${API_REPO}:latest"
-
-          COMMANDS=$(jq -nc \
-            --arg region "$REGION" \
-            --arg ui_image "$UI_IMAGE" \
-            --arg api_image "$API_IMAGE" \
-            --arg nextauth_url "$NEXTAUTH_URL" \
-            --arg next_public_api_base "$NEXT_PUBLIC_API_BASE" \
-            --arg next_public_icon_base "$NEXT_PUBLIC_ICON_BASE" \
-            --arg google_client_id "$GOOGLE_CLIENT_ID" \
-            --arg google_client_secret "$GOOGLE_CLIENT_SECRET" \
-            --arg nextauth_secret "$NEXTAUTH_SECRET" \
-            --arg github_client_id "$OAUTH_GITHUB_CLIENT_ID" \
-            --arg github_client_secret "$OAUTH_GITHUB_CLIENT_SECRET" \
-            '[
-              "set -euo pipefail",
-              "REGION=\($region)",
-              "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
-              "UI_IMAGE=\($ui_image)",
-              "API_IMAGE=\($api_image)",
-              "if ! command -v docker >/dev/null 2>&1; then yum update -y && (amazon-linux-extras install docker -y || yum install -y docker); systemctl enable docker; systemctl start docker; fi",
-              "aws ecr get-login-password --region \($region) | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.\($region).amazonaws.com",
-              "docker pull \($ui_image) || true",
-              "docker pull \($api_image) || true",
-              "docker stop ui || true && docker rm ui || true",
-              "docker stop api || true && docker rm api || true",
-              "docker run -d --name ui -p 3000:3000 -e NEXTAUTH_URL=\($nextauth_url) -e NEXT_PUBLIC_API_BASE=\($next_public_api_base) -e NEXT_PUBLIC_ICON_BASE=\($next_public_icon_base) -e GOOGLE_CLIENT_ID=\($google_client_id) -e GOOGLE_CLIENT_SECRET=\($google_client_secret) -e NEXTAUTH_SECRET=\($nextauth_secret) -e OAUTH_GITHUB_CLIENT_ID=\($github_client_id) -e OAUTH_GITHUB_CLIENT_SECRET=\($github_client_secret) \($ui_image)",
-              "docker run -d --name api -p 4000:4000 \($api_image)",
-              "docker ps"
-            ]')
-
-          CMD_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --parameters "commands=$COMMANDS" \
-            --region "$REGION" \
-            --query 'Command.CommandId' \
-            --output text)
-
-          echo "SSM restart command: $CMD_ID"
-
-          # Allow more time and emit stdout/stderr on failure
-          for i in {1..60}; do
-            STATUS=$(aws ssm get-command-invocation \
-              --command-id "$CMD_ID" \
-              --instance-id "$INSTANCE_ID" \
-              --region "$REGION" \
-              --query 'Status' \
-              --output text || true)
-            if [ "$STATUS" = "Success" ]; then
-              echo "SSM restart succeeded"
-              exit 0
-            fi
-            if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
-              echo "SSM restart failed with status: $STATUS"
-              aws ssm get-command-invocation \
-                --command-id "$CMD_ID" \
-                --instance-id "$INSTANCE_ID" \
-                --region "$REGION" \
-                --query '{status:Status,stdOut:StandardOutputContent,stdErr:StandardErrorContent}'
-              exit 1
-            fi
-            sleep 10
-          done
-
-          echo "SSM restart timed out"
-          aws ssm get-command-invocation \
-            --command-id "$CMD_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --region "$REGION" \
-            --query '{status:Status,stdOut:StandardOutputContent,stdErr:StandardErrorContent}'
-          exit 1
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_UI_SERVICE" "$ECS_API_SERVICE" \
+            --region "$AWS_REGION"

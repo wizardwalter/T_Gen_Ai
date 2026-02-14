@@ -63,6 +63,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const apiSharedSecret = process.env.API_SHARED_SECRET;
+app.use("/api/terraform", (req, res, next) => {
+  if (req.method === "OPTIONS") return next();
+  if (!apiSharedSecret) {
+    return res.status(500).json({ error: "API shared secret not configured" });
+  }
+  const header = req.header("x-stackgenerate-ui-secret");
+  if (header !== apiSharedSecret) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  return next();
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
