@@ -5,7 +5,7 @@ ARG DATABASE_URL="postgresql://local:local@localhost:5432/localdb"
 ENV DATABASE_URL=$DATABASE_URL
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm install
+RUN npm install --include=dev
 
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -21,6 +21,7 @@ ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXT_PUBLIC_ICON_BASE=$NEXT_PUBLIC_ICON_BASE
 RUN ./node_modules/.bin/prisma generate
 RUN npm run build
+RUN npm prune --omit=dev
 
 FROM node:20-alpine AS runner
 WORKDIR /app
