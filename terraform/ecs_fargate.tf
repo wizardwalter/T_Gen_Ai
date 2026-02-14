@@ -1,5 +1,5 @@
 locals {
-  database_url = "postgresql://${var.db_master_username}:${var.db_master_password}@${aws_rds_cluster.app.endpoint}:${var.db_port}/${var.db_name}?schema=public"
+  database_url = "postgresql://${var.db_master_username}:${var.db_master_password}@${aws_db_instance.app.address}:${var.db_port}/${var.db_name}?schema=public"
 }
 
 resource "aws_ecs_cluster" "app" {
@@ -35,50 +35,23 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_security_group" "alb" {
-  name        = "${var.project_name}-alb-sg"
-  description = "Allow HTTP/HTTPS to ALB"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 resource "aws_security_group" "ecs_tasks" {
   name        = "${var.project_name}-ecs-tasks-sg"
-  description = "Allow ALB to reach ECS tasks"
+  description = "Public access to UI/API tasks"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port       = var.ui_container_port
     to_port         = var.ui_container_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    cidr_blocks     = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port       = var.api_container_port
     to_port         = var.api_container_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    cidr_blocks     = ["0.0.0.0/0"]
   }
 
   egress {
@@ -86,103 +59,6 @@ resource "aws_security_group" "ecs_tasks" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_lb" "app" {
-  name               = "${var.project_name}-alb"
-  load_balancer_type = "application"
-  subnets            = data.aws_subnets.default.ids
-  security_groups    = [aws_security_group.alb.id]
-}
-
-resource "aws_lb_target_group" "ui" {
-  name        = "${var.project_name}-ui-tg"
-  port        = var.ui_container_port
-  protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.default.id
-  target_type = "ip"
-
-  health_check {
-    path                = "/"
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    matcher             = "200-399"
-  }
-}
-
-resource "aws_lb_target_group" "api" {
-  name        = "${var.project_name}-api-tg"
-  port        = var.api_container_port
-  protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.default.id
-  target_type = "ip"
-
-  health_check {
-    path                = "/health"
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    matcher             = "200-399"
-  }
-}
-
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.app.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-}
-
-resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.app.arn
-  port              = 443
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = var.alb_certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.ui.arn
-  }
-}
-
-resource "aws_lb_listener_rule" "api" {
-  listener_arn = aws_lb_listener.https.arn
-  priority     = 10
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.api.arn
-  }
-
-  condition {
-    host_header {
-      values = [var.api_domain_name]
-    }
-  }
-}
-
-resource "aws_lb_listener_rule" "ui" {
-  listener_arn = aws_lb_listener.https.arn
-  priority     = 20
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.ui.arn
-  }
-
-  condition {
-    host_header {
-      values = var.ui_domain_names
-    }
   }
 }
 
@@ -271,14 +147,6 @@ resource "aws_ecs_service" "ui" {
     security_groups = [aws_security_group.ecs_tasks.id]
     assign_public_ip = true
   }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.ui.arn
-    container_name   = "ui"
-    container_port   = var.ui_container_port
-  }
-
-  depends_on = [aws_lb_listener.https]
 }
 
 resource "aws_ecs_service" "api" {
@@ -293,14 +161,6 @@ resource "aws_ecs_service" "api" {
     security_groups = [aws_security_group.ecs_tasks.id]
     assign_public_ip = true
   }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.api.arn
-    container_name   = "api"
-    container_port   = var.api_container_port
-  }
-
-  depends_on = [aws_lb_listener.https]
 }
 
 resource "aws_appautoscaling_target" "ui" {

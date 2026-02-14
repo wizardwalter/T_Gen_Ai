@@ -1,17 +1,3 @@
-output "cloudfront_domain" {
-  description = "CloudFront domain for the UI"
-  value       = aws_cloudfront_distribution.ui.domain_name
-}
-
-output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID for invalidations"
-  value       = aws_cloudfront_distribution.ui.id
-}
-
-output "cloudfront_aliases" {
-  description = "Configured CloudFront aliases"
-  value       = aws_cloudfront_distribution.ui.aliases
-}
 
 output "api_ecr_repository_url" {
   description = "ECR repository URL for the API image"
@@ -23,15 +9,6 @@ output "ui_ecr_repository_url" {
   value       = aws_ecr_repository.ui.repository_url
 }
 
-output "alb_dns_name" {
-  description = "DNS name for the application load balancer"
-  value       = aws_lb.app.dns_name
-}
-
-output "alb_zone_id" {
-  description = "Zone ID for the application load balancer"
-  value       = aws_lb.app.zone_id
-}
 
 output "ecs_cluster_name" {
   description = "ECS cluster name"
@@ -58,17 +35,12 @@ output "icons_base_url" {
   value       = "https://${aws_s3_bucket.icons.bucket}.s3.amazonaws.com"
 }
 
-output "aurora_endpoint" {
-  description = "Writer endpoint for Aurora"
-  value       = aws_rds_cluster.app.endpoint
+output "db_endpoint" {
+  description = "RDS endpoint for Postgres"
+  value       = aws_db_instance.app.address
 }
 
-output "aurora_reader_endpoint" {
-  description = "Reader endpoint for Aurora"
-  value       = aws_rds_cluster.app.reader_endpoint
-}
-
-output "aurora_db_name" {
+output "db_name" {
   description = "Database name"
-  value       = aws_rds_cluster.app.database_name
+  value       = aws_db_instance.app.db_name
 }

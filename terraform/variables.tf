@@ -22,29 +22,6 @@ variable "ui_image" {
   default     = ""
 }
 
-variable "cloudfront_price_class" {
-  description = "CloudFront price class"
-  type        = string
-  default     = "PriceClass_100"
-}
-
-variable "cloudfront_domain_names" {
-  description = "Optional list of custom domain names (aliases) for CloudFront (e.g., stackgenerate.com, www.stackgenerate.com)"
-  type        = list(string)
-  default     = []
-}
-
-variable "acm_certificate_arn" {
-  description = "Optional ACM certificate ARN (in us-east-1) for the CloudFront distribution"
-  type        = string
-  default     = ""
-}
-
-variable "alb_certificate_arn" {
-  description = "ACM certificate ARN (in-region) for the ALB HTTPS listener"
-  type        = string
-  default     = ""
-}
 
 variable "ui_container_port" {
   description = "Port the UI container listens on"
@@ -58,17 +35,6 @@ variable "api_container_port" {
   default     = 4000
 }
 
-variable "api_domain_name" {
-  description = "Domain name for the API (e.g., api.stackgenerate.com)"
-  type        = string
-  default     = ""
-}
-
-variable "ui_domain_names" {
-  description = "Domain names for the UI on the ALB (e.g., www.stackgenerate.com)"
-  type        = list(string)
-  default     = []
-}
 
 variable "nextauth_url" {
   description = "NEXTAUTH_URL for the UI container"
@@ -191,19 +157,19 @@ variable "api_max_count" {
 }
 
 variable "db_name" {
-  description = "Database name for Aurora"
+  description = "Database name for Postgres"
   type        = string
   default     = "appdb"
 }
 
 variable "db_master_username" {
-  description = "Master username for Aurora"
+  description = "Master username for Postgres"
   type        = string
   default     = "appuser"
 }
 
 variable "db_master_password" {
-  description = "Master password for Aurora"
+  description = "Master password for Postgres"
   type        = string
   sensitive   = true
 }
@@ -214,14 +180,14 @@ variable "db_port" {
   default     = 5432
 }
 
-variable "db_min_capacity_acu" {
-  description = "Aurora Serverless v2 minimum ACUs"
-  type        = number
-  default     = 0.5
+variable "db_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t4g.micro"
 }
 
-variable "db_max_capacity_acu" {
-  description = "Aurora Serverless v2 maximum ACUs"
+variable "db_allocated_storage" {
+  description = "Allocated storage in GB"
   type        = number
-  default     = 2
+  default     = 20
 }
