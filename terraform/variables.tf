@@ -22,6 +22,29 @@ variable "ui_image" {
   default     = ""
 }
 
+variable "cloudfront_price_class" {
+  description = "CloudFront price class"
+  type        = string
+  default     = "PriceClass_100"
+}
+
+variable "cloudfront_domain_names" {
+  description = "Optional list of custom domain names (aliases) for CloudFront (e.g., stackgenerate.com, www.stackgenerate.com)"
+  type        = list(string)
+  default     = []
+}
+
+variable "acm_certificate_arn" {
+  description = "Optional ACM certificate ARN (in us-east-1) for the CloudFront distribution"
+  type        = string
+  default     = ""
+}
+
+variable "alb_certificate_arn" {
+  description = "ACM certificate ARN (in-region) for the ALB HTTPS listener"
+  type        = string
+  default     = ""
+}
 
 variable "ui_container_port" {
   description = "Port the UI container listens on"
@@ -35,6 +58,17 @@ variable "api_container_port" {
   default     = 4000
 }
 
+variable "api_domain_name" {
+  description = "Domain name for the API (e.g., api.stackgenerate.com)"
+  type        = string
+  default     = ""
+}
+
+variable "ui_domain_names" {
+  description = "Domain names for the UI on the ALB (e.g., www.stackgenerate.com)"
+  type        = list(string)
+  default     = []
+}
 
 variable "nextauth_url" {
   description = "NEXTAUTH_URL for the UI container"

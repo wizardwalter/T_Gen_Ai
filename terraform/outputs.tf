@@ -9,6 +9,30 @@ output "ui_ecr_repository_url" {
   value       = aws_ecr_repository.ui.repository_url
 }
 
+output "cloudfront_domain" {
+  description = "CloudFront domain for the UI"
+  value       = aws_cloudfront_distribution.ui.domain_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for invalidations"
+  value       = aws_cloudfront_distribution.ui.id
+}
+
+output "cloudfront_aliases" {
+  description = "Configured CloudFront aliases"
+  value       = aws_cloudfront_distribution.ui.aliases
+}
+
+output "alb_dns_name" {
+  description = "DNS name for the application load balancer"
+  value       = aws_lb.app.dns_name
+}
+
+output "alb_zone_id" {
+  description = "Zone ID for the application load balancer"
+  value       = aws_lb.app.zone_id
+}
 
 output "ecs_cluster_name" {
   description = "ECS cluster name"
