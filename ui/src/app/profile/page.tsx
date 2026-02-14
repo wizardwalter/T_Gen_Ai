@@ -27,6 +27,8 @@ export default async function ProfilePage() {
       accounts: { select: { provider: true, providerAccountId: true } },
     },
   });
+  type AccountSummary = { provider: string; providerAccountId: string };
+  const accounts: AccountSummary[] = user?.accounts ?? [];
 
   return (
     <div className="min-h-screen text-slate-100">
@@ -57,8 +59,8 @@ export default async function ProfilePage() {
             Google and GitHub SSO are supported. Linking requires starting from this page to keep it secure.
           </p>
           <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-            {(user?.accounts || []).length === 0 && <li>No providers linked yet.</li>}
-            {user?.accounts.map((acct) => (
+            {accounts.length === 0 && <li>No providers linked yet.</li>}
+            {accounts.map((acct) => (
               <li key={`${acct.provider}-${acct.providerAccountId}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
                 <span className="font-semibold capitalize">{acct.provider}</span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">ID: {acct.providerAccountId}</span>
