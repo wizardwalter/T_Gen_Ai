@@ -1,5 +1,5 @@
 # Build and run the Express API (TypeScript)
-FROM node:20-alpine AS deps
+FROM node:20-bullseye-slim AS deps
 WORKDIR /app
 ARG DATABASE_URL="postgresql://local:local@localhost:5432/localdb"
 ENV DATABASE_URL=$DATABASE_URL
@@ -7,7 +7,7 @@ COPY package*.json ./
 COPY prisma ./prisma
 RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi
 
-FROM node:20-alpine AS builder
+FROM node:20-bullseye-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/prisma ./prisma
@@ -15,7 +15,7 @@ COPY . .
 RUN ./node_modules/.bin/prisma generate
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:20-bullseye-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
