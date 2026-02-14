@@ -1,5 +1,5 @@
 # Build and serve the Next.js UI
-FROM node:20-alpine AS deps
+FROM node:20-bullseye-slim AS deps
 WORKDIR /app
 ARG DATABASE_URL="postgresql://local:local@localhost:5432/localdb"
 ENV DATABASE_URL=$DATABASE_URL
@@ -7,9 +7,8 @@ COPY package*.json ./
 COPY prisma ./prisma
 RUN npm install --include=dev
 
-FROM node:20-alpine AS builder
+FROM node:20-bullseye-slim AS builder
 WORKDIR /app
-RUN apk add --no-cache openssl1.1-compat
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_BASE
 ARG NEXTAUTH_URL
@@ -24,9 +23,8 @@ RUN ./node_modules/.bin/prisma generate
 RUN npm run build
 RUN npm prune --omit=dev
 
-FROM node:20-alpine AS runner
+FROM node:20-bullseye-slim AS runner
 WORKDIR /app
-RUN apk add --no-cache openssl1.1-compat
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
