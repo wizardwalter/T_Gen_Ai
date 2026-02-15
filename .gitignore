@@ -17,3 +17,4 @@ scripts/ssm.sh
 scripts/common_commands.txt
 scripts/checklist.txt
 test_terraform/
+terraform/terraform.tfvars

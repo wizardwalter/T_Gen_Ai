@@ -22,30 +22,6 @@ variable "ui_image" {
   default     = ""
 }
 
-variable "cloudfront_price_class" {
-  description = "CloudFront price class"
-  type        = string
-  default     = "PriceClass_100"
-}
-
-variable "cloudfront_domain_names" {
-  description = "Optional list of custom domain names (aliases) for CloudFront (e.g., stackgenerate.com, www.stackgenerate.com)"
-  type        = list(string)
-  default     = []
-}
-
-variable "acm_certificate_arn" {
-  description = "Optional ACM certificate ARN (in us-east-1) for the CloudFront distribution"
-  type        = string
-  default     = ""
-}
-
-variable "alb_certificate_arn" {
-  description = "ACM certificate ARN (in-region) for the ALB HTTPS listener"
-  type        = string
-  default     = ""
-}
-
 variable "ui_container_port" {
   description = "Port the UI container listens on"
   type        = number
@@ -58,16 +34,16 @@ variable "api_container_port" {
   default     = 4000
 }
 
-variable "api_domain_name" {
-  description = "Domain name for the API (e.g., api.stackgenerate.com)"
+variable "ui_domain_name" {
+  description = "Custom domain for the UI (e.g., www.stackgenerate.com)"
   type        = string
   default     = ""
 }
 
-variable "ui_domain_names" {
-  description = "Domain names for the UI on the ALB (e.g., www.stackgenerate.com)"
-  type        = list(string)
-  default     = []
+variable "api_domain_name" {
+  description = "Custom domain for the API (e.g., api.stackgenerate.com)"
+  type        = string
+  default     = ""
 }
 
 variable "nextauth_url" {
@@ -130,64 +106,34 @@ variable "nextauth_secret" {
   default     = ""
 }
 
-variable "ui_task_cpu" {
-  description = "CPU units for the UI task"
-  type        = number
-  default     = 256
+variable "apprunner_auto_deployments" {
+  description = "Enable App Runner auto deployments"
+  type        = bool
+  default     = true
 }
 
-variable "ui_task_memory" {
-  description = "Memory (MiB) for the UI task"
-  type        = number
-  default     = 512
+variable "ui_instance_cpu" {
+  description = "App Runner UI CPU (e.g., 0.25 vCPU, 0.5 vCPU, 1 vCPU)"
+  type        = string
+  default     = "0.25 vCPU"
 }
 
-variable "api_task_cpu" {
-  description = "CPU units for the API task"
-  type        = number
-  default     = 256
+variable "ui_instance_memory" {
+  description = "App Runner UI memory (e.g., 0.5 GB, 1 GB, 2 GB)"
+  type        = string
+  default     = "0.5 GB"
 }
 
-variable "api_task_memory" {
-  description = "Memory (MiB) for the API task"
-  type        = number
-  default     = 512
+variable "api_instance_cpu" {
+  description = "App Runner API CPU (e.g., 0.25 vCPU, 0.5 vCPU, 1 vCPU)"
+  type        = string
+  default     = "0.25 vCPU"
 }
 
-variable "ui_desired_count" {
-  description = "Desired count for the UI service"
-  type        = number
-  default     = 1
-}
-
-variable "ui_min_count" {
-  description = "Minimum count for the UI service autoscaling"
-  type        = number
-  default     = 1
-}
-
-variable "ui_max_count" {
-  description = "Maximum count for the UI service autoscaling"
-  type        = number
-  default     = 3
-}
-
-variable "api_desired_count" {
-  description = "Desired count for the API service"
-  type        = number
-  default     = 1
-}
-
-variable "api_min_count" {
-  description = "Minimum count for the API service autoscaling"
-  type        = number
-  default     = 1
-}
-
-variable "api_max_count" {
-  description = "Maximum count for the API service autoscaling"
-  type        = number
-  default     = 3
+variable "api_instance_memory" {
+  description = "App Runner API memory (e.g., 0.5 GB, 1 GB, 2 GB)"
+  type        = string
+  default     = "0.5 GB"
 }
 
 variable "db_name" {

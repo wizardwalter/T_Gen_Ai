@@ -9,44 +9,34 @@ output "ui_ecr_repository_url" {
   value       = aws_ecr_repository.ui.repository_url
 }
 
-output "cloudfront_domain" {
-  description = "CloudFront domain for the UI"
-  value       = aws_cloudfront_distribution.ui.domain_name
+output "ui_service_url" {
+  description = "App Runner URL for the UI service"
+  value       = aws_apprunner_service.ui.service_url
 }
 
-output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID for invalidations"
-  value       = aws_cloudfront_distribution.ui.id
+output "api_service_url" {
+  description = "App Runner URL for the API service"
+  value       = aws_apprunner_service.api.service_url
 }
 
-output "cloudfront_aliases" {
-  description = "Configured CloudFront aliases"
-  value       = aws_cloudfront_distribution.ui.aliases
+output "ui_domain_validation_records" {
+  description = "DNS records required to validate the UI custom domain"
+  value       = var.ui_domain_name != "" ? aws_apprunner_custom_domain_association.ui[0].certificate_validation_records : []
 }
 
-output "alb_dns_name" {
-  description = "DNS name for the application load balancer"
-  value       = aws_lb.app.dns_name
+output "api_domain_validation_records" {
+  description = "DNS records required to validate the API custom domain"
+  value       = var.api_domain_name != "" ? aws_apprunner_custom_domain_association.api[0].certificate_validation_records : []
 }
 
-output "alb_zone_id" {
-  description = "Zone ID for the application load balancer"
-  value       = aws_lb.app.zone_id
+output "ui_domain_dns_target" {
+  description = "CNAME target for the UI custom domain"
+  value       = var.ui_domain_name != "" ? aws_apprunner_custom_domain_association.ui[0].dns_target : ""
 }
 
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = aws_ecs_cluster.app.name
-}
-
-output "ecs_ui_service_name" {
-  description = "ECS UI service name"
-  value       = aws_ecs_service.ui.name
-}
-
-output "ecs_api_service_name" {
-  description = "ECS API service name"
-  value       = aws_ecs_service.api.name
+output "api_domain_dns_target" {
+  description = "CNAME target for the API custom domain"
+  value       = var.api_domain_name != "" ? aws_apprunner_custom_domain_association.api[0].dns_target : ""
 }
 
 output "icons_bucket_name" {

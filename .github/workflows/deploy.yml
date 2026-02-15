@@ -14,11 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
-      TF_VAR_acm_certificate_arn: ${{ secrets.TF_VAR_acm_certificate_arn }}
-      TF_VAR_cloudfront_domain_names: ${{ secrets.CLOUDFRONT_DOMAIN_NAMES }}
-      TF_VAR_alb_certificate_arn: ${{ secrets.ALB_CERTIFICATE_ARN }}
       TF_VAR_api_domain_name: ${{ secrets.API_DOMAIN_NAME }}
-      TF_VAR_ui_domain_names: ${{ secrets.UI_DOMAIN_NAMES }}
+      TF_VAR_ui_domain_name: ${{ secrets.UI_DOMAIN_NAME }}
       TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
       TF_VAR_next_public_api_base: ${{ secrets.NEXT_PUBLIC_API_BASE }}
       TF_VAR_api_base: ${{ secrets.API_BASE }}
@@ -102,17 +99,3 @@ jobs:
       - name: Terraform Apply
         working-directory: terraform
         run: terraform apply -auto-approve
-
-      - name: Fetch outputs for ECS services
-        working-directory: terraform
-        run: |
-          echo "ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_ENV
-          echo "ECS_UI_SERVICE=$(terraform output -raw ecs_ui_service_name)" >> $GITHUB_ENV
-          echo "ECS_API_SERVICE=$(terraform output -raw ecs_api_service_name)" >> $GITHUB_ENV
-
-      - name: Wait for ECS services to stabilize
-        run: |
-          aws ecs wait services-stable \
-            --cluster "$ECS_CLUSTER" \
-            --services "$ECS_UI_SERVICE" "$ECS_API_SERVICE" \
-            --region "$AWS_REGION"
