@@ -46,6 +46,24 @@ variable "api_domain_name" {
   default     = ""
 }
 
+variable "root_domain_name" {
+  description = "Apex/root domain (e.g., stackgenerate.com)"
+  type        = string
+  default     = ""
+}
+
+variable "apex_redirect_target" {
+  description = "Host to redirect the apex domain to (e.g., www.stackgenerate.com)"
+  type        = string
+  default     = ""
+}
+
+variable "hosted_zone_id" {
+  description = "Route53 hosted zone ID for the root domain"
+  type        = string
+  default     = ""
+}
+
 variable "nextauth_url" {
   description = "NEXTAUTH_URL for the UI container"
   type        = string
