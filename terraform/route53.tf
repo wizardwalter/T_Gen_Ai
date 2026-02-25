@@ -8,30 +8,24 @@ locals {
   s3_website_zone_id = lookup(local.s3_website_zone_ids, var.aws_region, null)
   apex_redirect_host = var.apex_redirect_target != "" ? var.apex_redirect_target : var.ui_domain_name
 
-  ui_validation_records = var.ui_domain_name != "" ? {
-    for r in aws_apprunner_custom_domain_association.ui[0].certificate_validation_records : r.name => r
-  } : {}
-  api_validation_records = var.api_domain_name != "" ? {
-    for r in aws_apprunner_custom_domain_association.api[0].certificate_validation_records : r.name => r
-  } : {}
 }
 
 resource "aws_route53_record" "ui_validation" {
-  for_each = var.hosted_zone_id != "" ? local.ui_validation_records : {}
-  zone_id  = var.hosted_zone_id
-  name     = each.value.name
-  type     = each.value.type
+  count   = var.ui_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
+  zone_id = var.hosted_zone_id
+  name    = aws_apprunner_custom_domain_association.ui[0].certificate_validation_records[0].name
+  type    = aws_apprunner_custom_domain_association.ui[0].certificate_validation_records[0].type
   ttl      = 300
-  records  = [each.value.value]
+  records  = [aws_apprunner_custom_domain_association.ui[0].certificate_validation_records[0].value]
 }
 
 resource "aws_route53_record" "api_validation" {
-  for_each = var.hosted_zone_id != "" ? local.api_validation_records : {}
-  zone_id  = var.hosted_zone_id
-  name     = each.value.name
-  type     = each.value.type
+  count   = var.api_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
+  zone_id = var.hosted_zone_id
+  name    = aws_apprunner_custom_domain_association.api[0].certificate_validation_records[0].name
+  type    = aws_apprunner_custom_domain_association.api[0].certificate_validation_records[0].type
   ttl      = 300
-  records  = [each.value.value]
+  records  = [aws_apprunner_custom_domain_association.api[0].certificate_validation_records[0].value]
 }
 
 resource "aws_route53_record" "ui_cname" {
@@ -103,20 +97,18 @@ resource "aws_acm_certificate" "apex_redirect" {
 }
 
 resource "aws_route53_record" "apex_redirect_validation" {
-  for_each = var.root_domain_name != "" && var.hosted_zone_id != "" ? {
-    for dvo in aws_acm_certificate.apex_redirect[0].domain_validation_options : dvo.domain_name => dvo
-  } : {}
+  count   = var.root_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
   zone_id = var.hosted_zone_id
-  name    = each.value.resource_record_name
-  type    = each.value.resource_record_type
+  name    = aws_acm_certificate.apex_redirect[0].domain_validation_options[0].resource_record_name
+  type    = aws_acm_certificate.apex_redirect[0].domain_validation_options[0].resource_record_type
   ttl     = 300
-  records = [each.value.resource_record_value]
+  records = [aws_acm_certificate.apex_redirect[0].domain_validation_options[0].resource_record_value]
 }
 
 resource "aws_acm_certificate_validation" "apex_redirect" {
   count                   = var.root_domain_name != "" ? 1 : 0
   certificate_arn         = aws_acm_certificate.apex_redirect[0].arn
-  validation_record_fqdns = [for r in aws_route53_record.apex_redirect_validation : r.fqdn]
+  validation_record_fqdns = var.hosted_zone_id != "" ? [aws_route53_record.apex_redirect_validation[0].fqdn] : []
 }
 
 resource "aws_cloudfront_distribution" "apex_redirect" {
