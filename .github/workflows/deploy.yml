@@ -50,6 +50,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
           role-session-name: gha-deploy
+          role-duration-seconds: 7200
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
