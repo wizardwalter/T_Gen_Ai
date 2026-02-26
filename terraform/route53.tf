@@ -13,19 +13,19 @@ locals {
 resource "aws_route53_record" "ui_validation" {
   count   = var.ui_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
   zone_id = var.hosted_zone_id
-  name    = aws_apprunner_custom_domain_association.ui[0].certificate_validation_records[0].name
-  type    = aws_apprunner_custom_domain_association.ui[0].certificate_validation_records[0].type
+  name    = one(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records).name
+  type    = one(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records).type
   ttl      = 300
-  records  = [aws_apprunner_custom_domain_association.ui[0].certificate_validation_records[0].value]
+  records  = [one(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records).value]
 }
 
 resource "aws_route53_record" "api_validation" {
   count   = var.api_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
   zone_id = var.hosted_zone_id
-  name    = aws_apprunner_custom_domain_association.api[0].certificate_validation_records[0].name
-  type    = aws_apprunner_custom_domain_association.api[0].certificate_validation_records[0].type
+  name    = one(aws_apprunner_custom_domain_association.api[0].certificate_validation_records).name
+  type    = one(aws_apprunner_custom_domain_association.api[0].certificate_validation_records).type
   ttl      = 300
-  records  = [aws_apprunner_custom_domain_association.api[0].certificate_validation_records[0].value]
+  records  = [one(aws_apprunner_custom_domain_association.api[0].certificate_validation_records).value]
 }
 
 resource "aws_route53_record" "ui_cname" {
@@ -99,10 +99,10 @@ resource "aws_acm_certificate" "apex_redirect" {
 resource "aws_route53_record" "apex_redirect_validation" {
   count   = var.root_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
   zone_id = var.hosted_zone_id
-  name    = aws_acm_certificate.apex_redirect[0].domain_validation_options[0].resource_record_name
-  type    = aws_acm_certificate.apex_redirect[0].domain_validation_options[0].resource_record_type
+  name    = one(aws_acm_certificate.apex_redirect[0].domain_validation_options).resource_record_name
+  type    = one(aws_acm_certificate.apex_redirect[0].domain_validation_options).resource_record_type
   ttl     = 300
-  records = [aws_acm_certificate.apex_redirect[0].domain_validation_options[0].resource_record_value]
+  records = [one(aws_acm_certificate.apex_redirect[0].domain_validation_options).resource_record_value]
 }
 
 resource "aws_acm_certificate_validation" "apex_redirect" {
