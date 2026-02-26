@@ -20,11 +20,11 @@ resource "aws_db_subnet_group" "app" {
 
 resource "aws_security_group" "db" {
   name        = "${var.project_name}-db-sg"
-  description = "Allow DB access from App Runner"
+  description = "Allow DB access from ECS tasks"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description     = "App Runner to Postgres"
+    description     = "ECS tasks to Postgres"
     from_port       = var.db_port
     to_port         = var.db_port
     protocol        = "tcp"
