@@ -52,7 +52,7 @@ resource "aws_security_group" "apprunner" {
 
 resource "aws_apprunner_vpc_connector" "app" {
   vpc_connector_name = "${var.project_name}-apprunner-vpc"
-  subnets            = data.aws_subnets.default.ids
+  subnets            = length(var.apprunner_subnet_ids) > 0 ? var.apprunner_subnet_ids : data.aws_subnets.default.ids
   security_groups    = [aws_security_group.apprunner.id]
 }
 

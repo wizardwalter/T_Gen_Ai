@@ -142,6 +142,12 @@ variable "ui_instance_memory" {
   default     = "0.5 GB"
 }
 
+variable "apprunner_subnet_ids" {
+  description = "Subnet IDs for App Runner VPC connector (leave empty to use default VPC subnets)"
+  type        = list(string)
+  default     = []
+}
+
 variable "api_instance_cpu" {
   description = "App Runner API CPU (e.g., 0.25 vCPU, 0.5 vCPU, 1 vCPU)"
   type        = string
