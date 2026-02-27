@@ -7,25 +7,33 @@ locals {
   }
   s3_website_zone_id = lookup(local.s3_website_zone_ids, var.aws_region, null)
   apex_redirect_host = var.apex_redirect_target != "" ? var.apex_redirect_target : var.ui_domain_name
+  ui_validation_records = var.ui_domain_name != "" ? {
+    for rec in aws_apprunner_custom_domain_association.ui[0].certificate_validation_records :
+    "${rec.name}|${rec.type}" => rec
+  } : {}
+  api_validation_records = var.api_domain_name != "" ? {
+    for rec in aws_apprunner_custom_domain_association.api[0].certificate_validation_records :
+    "${rec.name}|${rec.type}" => rec
+  } : {}
 
 }
 
 resource "aws_route53_record" "ui_validation" {
-  count   = var.ui_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
+  for_each = var.ui_domain_name != "" && var.hosted_zone_id != "" ? local.ui_validation_records : {}
   zone_id = var.hosted_zone_id
-  name    = one(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records).name
-  type    = one(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records).type
+  name    = each.value.name
+  type    = each.value.type
   ttl      = 300
-  records  = [one(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records).value]
+  records  = [each.value.value]
 }
 
 resource "aws_route53_record" "api_validation" {
-  count   = var.api_domain_name != "" && var.hosted_zone_id != "" ? 1 : 0
+  for_each = var.api_domain_name != "" && var.hosted_zone_id != "" ? local.api_validation_records : {}
   zone_id = var.hosted_zone_id
-  name    = one(aws_apprunner_custom_domain_association.api[0].certificate_validation_records).name
-  type    = one(aws_apprunner_custom_domain_association.api[0].certificate_validation_records).type
+  name    = each.value.name
+  type    = each.value.type
   ttl      = 300
-  records  = [one(aws_apprunner_custom_domain_association.api[0].certificate_validation_records).value]
+  records  = [each.value.value]
 }
 
 resource "aws_route53_record" "ui_cname" {

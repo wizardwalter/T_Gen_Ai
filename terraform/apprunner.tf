@@ -1,5 +1,32 @@
 locals {
   database_url = "postgresql://${var.db_master_username}:${var.db_master_password}@${aws_db_instance.app.address}:${var.db_port}/${var.db_name}?schema=public"
+  ui_env_raw = {
+    NEXTAUTH_URL               = var.nextauth_url
+    NEXT_PUBLIC_API_BASE       = var.next_public_api_base
+    NEXT_PUBLIC_ICON_BASE      = var.next_public_icon_base
+    API_BASE                   = var.api_base
+    API_SHARED_SECRET          = var.api_shared_secret
+    GOOGLE_CLIENT_ID           = var.google_client_id
+    GOOGLE_CLIENT_SECRET       = var.google_client_secret
+    OAUTH_GITHUB_CLIENT_ID     = var.oauth_github_client_id
+    OAUTH_GITHUB_CLIENT_SECRET = var.oauth_github_client_secret
+    NEXTAUTH_SECRET            = var.nextauth_secret
+    DATABASE_URL               = local.database_url
+  }
+  api_env_raw = {
+    DATABASE_URL      = local.database_url
+    API_SHARED_SECRET = var.api_shared_secret
+  }
+  ui_env = {
+    for k, v in local.ui_env_raw :
+    k => trimspace(coalesce(v, ""))
+    if trimspace(coalesce(v, "")) != ""
+  }
+  api_env = {
+    for k, v in local.api_env_raw :
+    k => trimspace(coalesce(v, ""))
+    if trimspace(coalesce(v, "")) != ""
+  }
 }
 
 resource "aws_iam_role" "apprunner_ecr" {
@@ -69,19 +96,7 @@ resource "aws_apprunner_service" "ui" {
       image_identifier      = var.ui_image
       image_configuration {
         port = tostring(var.ui_container_port)
-        runtime_environment_variables = {
-          NEXTAUTH_URL            = var.nextauth_url
-          NEXT_PUBLIC_API_BASE    = var.next_public_api_base
-          NEXT_PUBLIC_ICON_BASE   = var.next_public_icon_base
-          API_BASE                = var.api_base
-          API_SHARED_SECRET       = var.api_shared_secret
-          GOOGLE_CLIENT_ID        = var.google_client_id
-          GOOGLE_CLIENT_SECRET    = var.google_client_secret
-          OAUTH_GITHUB_CLIENT_ID  = var.oauth_github_client_id
-          OAUTH_GITHUB_CLIENT_SECRET = var.oauth_github_client_secret
-          NEXTAUTH_SECRET         = var.nextauth_secret
-          DATABASE_URL            = local.database_url
-        }
+        runtime_environment_variables = local.ui_env
       }
     }
 
@@ -123,10 +138,7 @@ resource "aws_apprunner_service" "api" {
       image_identifier      = var.api_image
       image_configuration {
         port = tostring(var.api_container_port)
-        runtime_environment_variables = {
-          DATABASE_URL      = local.database_url
-          API_SHARED_SECRET = var.api_shared_secret
-        }
+        runtime_environment_variables = local.api_env
       }
     }
 
