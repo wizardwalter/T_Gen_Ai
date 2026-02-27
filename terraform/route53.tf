@@ -15,7 +15,9 @@ locals {
 
 resource "aws_route53_record" "ui_validation" {
   for_each = var.ui_domain_name != "" && var.hosted_zone_id != "" ? {
-    for idx in local.apprunner_validation_indices : idx => idx
+    for idx in local.apprunner_validation_indices :
+    idx => idx
+    if length(local.ui_validation_records_list) > tonumber(idx)
   } : {}
   zone_id = var.hosted_zone_id
   name    = local.ui_validation_records_list[tonumber(each.key)].name
@@ -26,7 +28,9 @@ resource "aws_route53_record" "ui_validation" {
 
 resource "aws_route53_record" "api_validation" {
   for_each = var.api_domain_name != "" && var.hosted_zone_id != "" ? {
-    for idx in local.apprunner_validation_indices : idx => idx
+    for idx in local.apprunner_validation_indices :
+    idx => idx
+    if length(local.api_validation_records_list) > tonumber(idx)
   } : {}
   zone_id = var.hosted_zone_id
   name    = local.api_validation_records_list[tonumber(each.key)].name
