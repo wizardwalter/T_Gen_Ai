@@ -15,6 +15,10 @@ resource "aws_cognito_user_pool" "app" {
 
   username_attributes = ["email"]
 
+  lifecycle {
+    ignore_changes = [schema]
+  }
+
   schema {
     attribute_data_type = "String"
     name                = "email"
