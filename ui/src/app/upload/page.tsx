@@ -1233,7 +1233,7 @@ export default function UploadPage() {
                 Sign in to start uploading Terraform.
               </p>
               <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                Use Google SSO to keep things simple—no passwords, no extra steps.
+                Use SSO to keep things simple—no passwords, no extra steps.
               </p>
               <div className="flex gap-3">
                 <Link

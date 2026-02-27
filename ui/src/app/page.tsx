@@ -134,7 +134,7 @@ export default function Home() {
             Start now
           </Link>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            {session ? "Authenticated and ready to upload." : "Sign in with Google to start uploading your Terraform."}
+            {session ? "Authenticated and ready to upload." : "Sign in with SSO to start uploading your Terraform."}
           </p>
         </div>
 

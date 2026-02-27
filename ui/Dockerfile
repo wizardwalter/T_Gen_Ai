@@ -1,10 +1,7 @@
 # Build and serve the Next.js UI
 FROM node:20-bullseye-slim AS deps
 WORKDIR /app
-ARG DATABASE_URL="postgresql://local:local@localhost:5432/localdb"
-ENV DATABASE_URL=$DATABASE_URL
 COPY package*.json ./
-COPY prisma ./prisma
 RUN npm install --include=dev
 
 FROM node:20-bullseye-slim AS builder
@@ -14,12 +11,10 @@ ARG NEXT_PUBLIC_API_BASE
 ARG NEXTAUTH_URL
 ARG NEXT_PUBLIC_ICON_BASE
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/prisma ./prisma
 COPY . .
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXT_PUBLIC_ICON_BASE=$NEXT_PUBLIC_ICON_BASE
-RUN ./node_modules/.bin/prisma generate
 RUN npm run build
 RUN npm prune --omit=dev
 
@@ -39,6 +34,5 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/prisma ./prisma
 EXPOSE 3000
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && npm run start"]
+CMD ["npm", "run", "start"]

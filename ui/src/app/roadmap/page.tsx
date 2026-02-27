@@ -10,7 +10,7 @@ const roadmapItems = [
   {
     title: "Account linking & security",
     status: "Building now",
-    detail: "Link Google + GitHub from a profile page with explicit link intents, provider email verification, and session history.",
+    detail: "Add provider linking from a profile page with explicit link intents, provider email verification, and session history.",
   },
   {
     title: "Usage insights",

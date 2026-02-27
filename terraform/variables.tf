@@ -106,18 +106,6 @@ variable "google_client_secret" {
   default     = ""
 }
 
-variable "oauth_github_client_id" {
-  description = "GitHub OAuth client ID"
-  type        = string
-  default     = ""
-}
-
-variable "oauth_github_client_secret" {
-  description = "GitHub OAuth client secret"
-  type        = string
-  default     = ""
-}
-
 variable "nextauth_secret" {
   description = "NEXTAUTH_SECRET for the UI container"
   type        = string
@@ -142,12 +130,6 @@ variable "ui_instance_memory" {
   default     = "0.5 GB"
 }
 
-variable "apprunner_subnet_ids" {
-  description = "Subnet IDs for App Runner VPC connector (leave empty to use default VPC subnets)"
-  type        = list(string)
-  default     = []
-}
-
 variable "api_instance_cpu" {
   description = "App Runner API CPU (e.g., 0.25 vCPU, 0.5 vCPU, 1 vCPU)"
   type        = string
@@ -160,38 +142,51 @@ variable "api_instance_memory" {
   default     = "0.5 GB"
 }
 
-variable "db_name" {
-  description = "Database name for Postgres"
+variable "cognito_domain_prefix" {
+  description = "Unique domain prefix for Cognito Hosted UI"
   type        = string
-  default     = "appdb"
 }
 
-variable "db_master_username" {
-  description = "Master username for Postgres"
+variable "facebook_app_id" {
+  description = "Facebook App ID for Cognito identity provider"
   type        = string
-  default     = "appuser"
+  default     = ""
 }
 
-variable "db_master_password" {
-  description = "Master password for Postgres"
+variable "facebook_app_secret" {
+  description = "Facebook App secret for Cognito identity provider"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
-variable "db_port" {
-  description = "Database port"
-  type        = number
-  default     = 5432
-}
-
-variable "db_instance_class" {
-  description = "RDS instance class"
+variable "facebook_api_version" {
+  description = "Facebook Graph API version"
   type        = string
-  default     = "db.t4g.micro"
+  default     = "v19.0"
 }
 
-variable "db_allocated_storage" {
-  description = "Allocated storage in GB"
-  type        = number
-  default     = 20
+variable "apple_client_id" {
+  description = "Apple Services ID (client_id) for Cognito identity provider"
+  type        = string
+  default     = ""
+}
+
+variable "apple_team_id" {
+  description = "Apple Team ID for Cognito identity provider"
+  type        = string
+  default     = ""
+}
+
+variable "apple_key_id" {
+  description = "Apple Key ID for Cognito identity provider"
+  type        = string
+  default     = ""
+}
+
+variable "apple_private_key" {
+  description = "Apple private key for Cognito identity provider (PEM)"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

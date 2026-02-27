@@ -1,36 +1,12 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
+import CognitoProvider from "next-auth/providers/cognito";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-      profile(profile) {
-        const first = (profile as { given_name?: string }).given_name;
-        const last = (profile as { family_name?: string }).family_name;
-        const fullName = [first, last].filter(Boolean).join(" ").trim();
-        return {
-          id: profile.sub,
-          name: fullName || profile.name,
-          email: profile.email,
-        };
-      },
-    }),
-    GitHubProvider({
-      clientId: process.env.OAUTH_GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET ?? "",
-      profile(profile) {
-        return {
-          id: profile.id?.toString(),
-          name: profile.name || profile.login,
-          email: profile.email,
-        };
-      },
+    CognitoProvider({
+      clientId: process.env.COGNITO_CLIENT_ID ?? "",
+      clientSecret: process.env.COGNITO_CLIENT_SECRET ?? "",
+      issuer: process.env.COGNITO_ISSUER ?? "",
     }),
   ],
   session: {
@@ -55,12 +31,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user && token.sub) {
-        const userRecord = (await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: { id: true },
-        })) as { id?: string } | null;
-
-        (session.user as { id?: string }).id = userRecord?.id ?? token.sub;
+        (session.user as { id?: string }).id = token.sub;
       }
       if (session.user && (token as { welcomeStatus?: string }).welcomeStatus) {
         (session.user as { welcomeStatus?: string }).welcomeStatus = (token as { welcomeStatus?: string }).welcomeStatus;

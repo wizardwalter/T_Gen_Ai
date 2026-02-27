@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     q: "How do you handle authentication?",
-    a: "We use NextAuth with Google and GitHub SSO. Sign-ups are gated to avoid surprise account creation, and you can link additional providers from your profile soon.",
+    a: "We use Cognito-backed SSO. Sign-ups are gated to avoid surprise account creation, and you can link additional providers from your profile soon.",
   },
   {
     q: "Where does my data live?",

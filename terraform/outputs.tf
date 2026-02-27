@@ -39,6 +39,21 @@ output "api_domain_dns_target" {
   value       = var.api_domain_name != "" ? aws_apprunner_custom_domain_association.api[0].dns_target : ""
 }
 
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.app.id
+}
+
+output "cognito_user_pool_client_id" {
+  description = "Cognito User Pool client ID"
+  value       = aws_cognito_user_pool_client.app.id
+}
+
+output "cognito_hosted_ui_domain" {
+  description = "Cognito Hosted UI domain"
+  value       = aws_cognito_user_pool_domain.app.domain
+}
+
 output "icons_bucket_name" {
   description = "S3 bucket for public icons"
   value       = aws_s3_bucket.icons.bucket
@@ -47,14 +62,4 @@ output "icons_bucket_name" {
 output "icons_base_url" {
   description = "Base URL for icons bucket"
   value       = "https://${aws_s3_bucket.icons.bucket}.s3.amazonaws.com"
-}
-
-output "db_endpoint" {
-  description = "RDS endpoint for Postgres"
-  value       = aws_db_instance.app.address
-}
-
-output "db_name" {
-  description = "Database name"
-  value       = aws_db_instance.app.db_name
 }

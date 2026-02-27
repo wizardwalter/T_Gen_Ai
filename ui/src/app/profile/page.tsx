@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import { SiteHeader } from "../components/site-header";
 import { SiteFooter } from "../components/site-footer";
@@ -19,17 +18,6 @@ export default async function ProfilePage() {
     redirect("/auth/sign-in?callbackUrl=/profile");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      name: true,
-      email: true,
-      accounts: { select: { provider: true, providerAccountId: true } },
-    },
-  });
-  type AccountSummary = { provider: string; providerAccountId: string };
-  const accounts: AccountSummary[] = user?.accounts ?? [];
-
   return (
     <div className="min-h-screen text-slate-100">
       <SiteHeader />
@@ -45,28 +33,19 @@ export default async function ProfilePage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Account</h2>
-            <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{user?.name || "Name not set"}</p>
-            <p className="text-sm text-slate-600 dark:text-slate-400">{user?.email || "Email missing"}</p>
+            <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{session.user?.name || "Name not set"}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{session.user?.email || "Email missing"}</p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Connected providers</h2>
-            <LinkButton href="/contact">Link another provider</LinkButton>
+            <LinkButton href="/contact">Manage account</LinkButton>
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Google and GitHub SSO are supported. Linking requires starting from this page to keep it secure.
+            Authentication is managed through Cognito. Use your account settings in the hosted login page to manage providers.
           </p>
-          <ul className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-            {accounts.length === 0 && <li>No providers linked yet.</li>}
-            {accounts.map((acct) => (
-              <li key={`${acct.provider}-${acct.providerAccountId}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/70">
-                <span className="font-semibold capitalize">{acct.provider}</span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">ID: {acct.providerAccountId}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       </main>
       <SiteFooter />

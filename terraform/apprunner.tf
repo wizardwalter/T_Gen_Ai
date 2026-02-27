@@ -1,20 +1,16 @@
 locals {
-  database_url = "postgresql://${var.db_master_username}:${var.db_master_password}@${aws_db_instance.app.address}:${var.db_port}/${var.db_name}?schema=public"
   ui_env_raw = {
-    NEXTAUTH_URL               = var.nextauth_url
-    NEXT_PUBLIC_API_BASE       = var.next_public_api_base
-    NEXT_PUBLIC_ICON_BASE      = var.next_public_icon_base
-    API_BASE                   = var.api_base
-    API_SHARED_SECRET          = var.api_shared_secret
-    GOOGLE_CLIENT_ID           = var.google_client_id
-    GOOGLE_CLIENT_SECRET       = var.google_client_secret
-    OAUTH_GITHUB_CLIENT_ID     = var.oauth_github_client_id
-    OAUTH_GITHUB_CLIENT_SECRET = var.oauth_github_client_secret
-    NEXTAUTH_SECRET            = var.nextauth_secret
-    DATABASE_URL               = local.database_url
+    NEXTAUTH_URL          = var.nextauth_url
+    NEXT_PUBLIC_API_BASE  = var.next_public_api_base
+    NEXT_PUBLIC_ICON_BASE = var.next_public_icon_base
+    API_BASE              = var.api_base
+    API_SHARED_SECRET     = var.api_shared_secret
+    NEXTAUTH_SECRET       = var.nextauth_secret
+    COGNITO_CLIENT_ID     = aws_cognito_user_pool_client.app.id
+    COGNITO_CLIENT_SECRET = aws_cognito_user_pool_client.app.client_secret
+    COGNITO_ISSUER        = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.app.id}"
   }
   api_env_raw = {
-    DATABASE_URL      = local.database_url
     API_SHARED_SECRET = var.api_shared_secret
   }
   ui_env = {
@@ -64,24 +60,6 @@ resource "aws_iam_role_policy" "apprunner_ecr" {
   })
 }
 
-resource "aws_security_group" "apprunner" {
-  name        = "${var.project_name}-apprunner-sg"
-  description = "Egress for App Runner services"
-  vpc_id      = data.aws_vpc.default.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_apprunner_vpc_connector" "app" {
-  vpc_connector_name = "${var.project_name}-apprunner-vpc"
-  subnets            = length(var.apprunner_subnet_ids) > 0 ? var.apprunner_subnet_ids : data.aws_subnets.default.ids
-  security_groups    = [aws_security_group.apprunner.id]
-}
 
 resource "aws_apprunner_service" "ui" {
   service_name = "${var.project_name}-ui"
@@ -119,8 +97,7 @@ resource "aws_apprunner_service" "ui" {
 
   network_configuration {
     egress_configuration {
-      egress_type       = "VPC"
-      vpc_connector_arn = aws_apprunner_vpc_connector.app.arn
+      egress_type = "DEFAULT"
     }
   }
 }
@@ -161,8 +138,7 @@ resource "aws_apprunner_service" "api" {
 
   network_configuration {
     egress_configuration {
-      egress_type       = "VPC"
-      vpc_connector_arn = aws_apprunner_vpc_connector.app.arn
+      egress_type = "DEFAULT"
     }
   }
 }
