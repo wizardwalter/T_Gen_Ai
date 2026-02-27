@@ -1,4 +1,8 @@
 locals {
+  cognito_email_base_url = var.ui_domain_name != "" ? "https://${var.ui_domain_name}" : (
+    var.root_domain_name != "" ? "https://${var.root_domain_name}" : "https://www.stackgenerate.com"
+  )
+
   cognito_callback_urls = compact([
     var.ui_domain_name != "" ? "https://${var.ui_domain_name}/api/auth/callback/cognito" : "",
     var.root_domain_name != "" ? "https://${var.root_domain_name}/api/auth/callback/cognito" : "",
@@ -14,6 +18,52 @@ resource "aws_cognito_user_pool" "app" {
   auto_verified_attributes = ["email"]
 
   username_attributes = ["email"]
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "Verify your StackGenerate account"
+    email_message        = <<-EOT
+      <html>
+        <body style="margin:0;padding:0;background:#0f172a;color:#e2e8f0;font-family:Arial,sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#111827;border:1px solid #334155;border-radius:16px;padding:24px;">
+                  <tr>
+                    <td align="center" style="padding-bottom:16px;">
+                      <img src="${local.cognito_email_base_url}/logo-v2.png" alt="StackGenerate" width="160" style="display:block;height:auto;" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:22px;font-weight:700;color:#f8fafc;padding-bottom:8px;">
+                      Confirm your email
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;line-height:1.6;color:#cbd5e1;padding-bottom:16px;">
+                      Use this code to finish setting up your StackGenerate account.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:16px;">
+                      <div style="display:inline-block;background:#020617;border:1px solid #475569;border-radius:10px;padding:12px 16px;font-size:28px;letter-spacing:4px;font-weight:700;color:#38bdf8;">
+                        {####}
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:12px;line-height:1.5;color:#94a3b8;">
+                      If you didn't request this, you can ignore this email.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    EOT
+  }
 
   dynamic "email_configuration" {
     for_each = var.cognito_ses_source_arn != "" ? [1] : []

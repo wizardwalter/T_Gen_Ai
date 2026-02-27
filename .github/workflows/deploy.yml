@@ -34,6 +34,10 @@ jobs:
       TF_VAR_apple_team_id: ${{ secrets.APPLE_TEAM_ID }}
       TF_VAR_apple_key_id: ${{ secrets.APPLE_KEY_ID }}
       TF_VAR_apple_private_key: ${{ secrets.APPLE_PRIVATE_KEY }}
+      TF_VAR_cognito_ses_source_arn: ${{ secrets.TF_VAR_cognito_ses_source_arn }}
+      TF_VAR_cognito_from_email: ${{ secrets.TF_VAR_cognito_from_email }}
+      TF_VAR_cognito_reply_to_email: ${{ secrets.TF_VAR_cognito_reply_to_email }}
+      TF_VAR_cognito_ses_configuration_set: ${{ secrets.TF_VAR_cognito_ses_configuration_set }}
       NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       NEXT_PUBLIC_API_BASE: ${{ secrets.NEXT_PUBLIC_API_BASE }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
