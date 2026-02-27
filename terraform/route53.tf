@@ -7,33 +7,32 @@ locals {
   }
   s3_website_zone_id = lookup(local.s3_website_zone_ids, var.aws_region, null)
   apex_redirect_host = var.apex_redirect_target != "" ? var.apex_redirect_target : var.ui_domain_name
-  ui_validation_records = var.ui_domain_name != "" ? {
-    for rec in aws_apprunner_custom_domain_association.ui[0].certificate_validation_records :
-    "${rec.name}|${rec.type}" => rec
-  } : {}
-  api_validation_records = var.api_domain_name != "" ? {
-    for rec in aws_apprunner_custom_domain_association.api[0].certificate_validation_records :
-    "${rec.name}|${rec.type}" => rec
-  } : {}
+  apprunner_validation_indices = ["0", "1", "2"]
+  ui_validation_records_list  = var.ui_domain_name != "" ? tolist(aws_apprunner_custom_domain_association.ui[0].certificate_validation_records) : []
+  api_validation_records_list = var.api_domain_name != "" ? tolist(aws_apprunner_custom_domain_association.api[0].certificate_validation_records) : []
 
 }
 
 resource "aws_route53_record" "ui_validation" {
-  for_each = var.ui_domain_name != "" && var.hosted_zone_id != "" ? local.ui_validation_records : {}
+  for_each = var.ui_domain_name != "" && var.hosted_zone_id != "" ? {
+    for idx in local.apprunner_validation_indices : idx => idx
+  } : {}
   zone_id = var.hosted_zone_id
-  name    = each.value.name
-  type    = each.value.type
+  name    = local.ui_validation_records_list[tonumber(each.key)].name
+  type    = local.ui_validation_records_list[tonumber(each.key)].type
   ttl      = 300
-  records  = [each.value.value]
+  records  = [local.ui_validation_records_list[tonumber(each.key)].value]
 }
 
 resource "aws_route53_record" "api_validation" {
-  for_each = var.api_domain_name != "" && var.hosted_zone_id != "" ? local.api_validation_records : {}
+  for_each = var.api_domain_name != "" && var.hosted_zone_id != "" ? {
+    for idx in local.apprunner_validation_indices : idx => idx
+  } : {}
   zone_id = var.hosted_zone_id
-  name    = each.value.name
-  type    = each.value.type
+  name    = local.api_validation_records_list[tonumber(each.key)].name
+  type    = local.api_validation_records_list[tonumber(each.key)].type
   ttl      = 300
-  records  = [each.value.value]
+  records  = [local.api_validation_records_list[tonumber(each.key)].value]
 }
 
 resource "aws_route53_record" "ui_cname" {
