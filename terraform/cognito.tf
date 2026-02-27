@@ -15,6 +15,17 @@ resource "aws_cognito_user_pool" "app" {
 
   username_attributes = ["email"]
 
+  dynamic "email_configuration" {
+    for_each = var.cognito_ses_source_arn != "" ? [1] : []
+    content {
+      email_sending_account  = "DEVELOPER"
+      from_email_address     = var.cognito_from_email
+      reply_to_email_address = var.cognito_reply_to_email
+      source_arn             = var.cognito_ses_source_arn
+      configuration_set      = var.cognito_ses_configuration_set != "" ? var.cognito_ses_configuration_set : null
+    }
+  }
+
   lifecycle {
     ignore_changes = [schema]
   }
@@ -99,9 +110,9 @@ resource "aws_cognito_user_pool_client" "app" {
   name         = "${var.project_name}-web"
   user_pool_id = aws_cognito_user_pool.app.id
 
-  generate_secret     = true
-  allowed_oauth_flows = ["code"]
-  allowed_oauth_scopes = ["openid", "email", "profile"]
+  generate_secret                      = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
   allowed_oauth_flows_user_pool_client = true
   supported_identity_providers = compact([
     "COGNITO",

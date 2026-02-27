@@ -16,7 +16,8 @@ Run this from the repo root after the container is up:
 - If you just want to push the schema without creating a migration file (e.g., in CI), use `npx prisma db push --schema prisma/schema.prisma`.
 
 ## What changed
-- NextAuth now uses Prisma + Postgres; sign-in will redirect to `/auth/sign-up` if no user exists. The sign-up page sets a short-lived cookie to allow first-time account creation via SSO, linking Google/GitHub by email.
+- NextAuth now uses Prisma + Postgres with Cognito as the auth provider.
+- Sign-up supports Google or native email/password with confirmation-code verification.
 - Express API uses the same Prisma client; `/health/db` checks connectivity.
 
 ## Switching to Aurora later

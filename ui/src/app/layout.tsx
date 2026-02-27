@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     "IaC visualization",
     "AWS diagram",
     "DevOps tooling",
-    "NextAuth SSO",
+    "Cognito auth",
   ],
   icons: {
     icon: [

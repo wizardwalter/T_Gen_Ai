@@ -147,6 +147,30 @@ variable "cognito_domain_prefix" {
   type        = string
 }
 
+variable "cognito_ses_source_arn" {
+  description = "SES identity ARN for Cognito email sending (enables DEVELOPER mode when set)"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_from_email" {
+  description = "From address used by Cognito emails (e.g., support@stackgenerate.com)"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_reply_to_email" {
+  description = "Reply-to address used by Cognito emails"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_ses_configuration_set" {
+  description = "Optional SES configuration set for Cognito email sending"
+  type        = string
+  default     = ""
+}
+
 variable "facebook_app_id" {
   description = "Facebook App ID for Cognito identity provider"
   type        = string

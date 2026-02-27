@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     q: "How do you handle authentication?",
-    a: "We use Cognito-backed SSO. Sign-ups are gated to avoid surprise account creation, and you can link additional providers from your profile soon.",
+    a: "We use Cognito-backed auth with Google and native email/password sign-up (including email verification).",
   },
   {
     q: "Where does my data live?",

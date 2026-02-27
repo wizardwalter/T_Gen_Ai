@@ -1,6 +1,6 @@
 # StackGenerate
 
-Terraform-to-architecture visualizer: drop in a Terraform folder, get back a clean AWS diagram with icons, lanes, and a legend. Google SSO keeps auth simple, and a lightweight Express API does the parsing.
+Terraform-to-architecture visualizer: drop in a Terraform folder, get back a clean AWS diagram with icons, lanes, and a legend. Cognito-backed auth supports Google and email/password, and a lightweight Express API does the parsing.
 
 ## What it does
 - Upload Terraform modules; backend parses HCL and emits nodes/edges.
@@ -10,7 +10,7 @@ Terraform-to-architecture visualizer: drop in a Terraform folder, get back a cle
 
 ## Stack
 - Frontend: Next.js 16, React 19, ReactFlow, Tailwind (v4 tooling).
-- Auth: NextAuth (Google).
+- Auth: NextAuth + Cognito (Google + email/password).
 - Backend: Express + TypeScript, HCL parsing via `@cdktf/hcl2json`.
 - Infra/CI: Terraform + GitHub Actions + ECR/EC2/SSM/CloudFront.
 

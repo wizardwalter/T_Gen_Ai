@@ -18,6 +18,11 @@
 - TF state: `TF_STATE_BUCKET`, `TF_STATE_KEY`, `TF_STATE_LOCK_TABLE`
 - TLS/aliases: `TF_VAR_acm_certificate_arn`, `CLOUDFRONT_DOMAIN_NAMES`
 - App env: `NEXTAUTH_URL`, `NEXT_PUBLIC_API_BASE`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_SECRET`
+- Optional (custom Cognito email sender via SES):
+  - `TF_VAR_cognito_ses_source_arn` (SES identity ARN for `stackgenerate.com` or `support@stackgenerate.com`)
+  - `TF_VAR_cognito_from_email` (for example `support@stackgenerate.com`)
+  - `TF_VAR_cognito_reply_to_email` (for example `support@stackgenerate.com`)
+  - `TF_VAR_cognito_ses_configuration_set` (optional)
 
 ## If deploy stalls
 
