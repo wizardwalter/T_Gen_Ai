@@ -171,10 +171,12 @@ resource "aws_apprunner_custom_domain_association" "ui" {
   count       = var.ui_domain_name != "" ? 1 : 0
   service_arn = aws_apprunner_service.ui.arn
   domain_name = var.ui_domain_name
+  enable_www_subdomain = false
 }
 
 resource "aws_apprunner_custom_domain_association" "api" {
   count       = var.api_domain_name != "" ? 1 : 0
   service_arn = aws_apprunner_service.api.arn
   domain_name = var.api_domain_name
+  enable_www_subdomain = false
 }
