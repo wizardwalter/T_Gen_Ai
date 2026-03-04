@@ -900,7 +900,7 @@ export default function UploadPage() {
                   )}
                 </label>
               </div>
-              <div className="mt-6 grid gap-3 text-sm text-slate-700 sm:grid-cols-1">
+              <div className="mt-6 grid gap-3 text-sm text-slate-200 sm:grid-cols-1">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200">
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                     What we parse

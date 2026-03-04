@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #050a18;
@@ -16,24 +17,6 @@
   --hero-title: #e2e8f0;
   --hero-sub: #cbd5e1;
   color-scheme: dark;
-}
-
-:root[data-theme="light"] {
-  --background: #f8fafc;
-  --panel: #ffffff;
-  --panel-soft: #f1f5f9;
-  --foreground: #0f172a;
-  --muted: #475569;
-  --border: #e2e8f0;
-  --accent: #0ea5e9;
-  --accent-strong: #a855f7;
-  --glow: rgba(14, 165, 233, 0.12);
-  --page-gradient: radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.08), transparent 28%),
-    radial-gradient(circle at 80% 0%, rgba(168, 85, 247, 0.08), transparent 32%),
-    linear-gradient(135deg, #f8fafc, #eef2ff 40%, #f8fafc);
-  --hero-title: #0f172a;
-  --hero-sub: #334155;
-  color-scheme: light;
 }
 
 * {
@@ -96,21 +79,6 @@ button.rounded-full:hover {
 .hero-sub {
   color: var(--hero-sub);
 }
-
-/* Light-mode overrides for existing slate utility classes */
-:root[data-theme="light"] .bg-slate-950 { background-color: #f8fafc !important; }
-:root[data-theme="light"] .bg-slate-950\/70 { background-color: rgba(248, 250, 252, 0.75) !important; }
-:root[data-theme="light"] .bg-slate-900 { background-color: #f1f5f9 !important; }
-:root[data-theme="light"] .bg-slate-900\/70 { background-color: rgba(241, 245, 249, 0.75) !important; }
-:root[data-theme="light"] .bg-slate-800 { background-color: #e2e8f0 !important; }
-:root[data-theme="light"] .bg-slate-800\/70 { background-color: rgba(226, 232, 240, 0.75) !important; }
-:root[data-theme="light"] .bg-slate-950\/60 { background-color: rgba(248, 250, 252, 0.6) !important; }
-:root[data-theme="light"] .border-slate-800 { border-color: #e2e8f0 !important; }
-:root[data-theme="light"] .border-slate-700 { border-color: #cbd5e1 !important; }
-:root[data-theme="light"] .text-slate-100,
-:root[data-theme="light"] .text-slate-200 { color: #0f172a !important; }
-:root[data-theme="light"] .text-slate-300,
-:root[data-theme="light"] .text-slate-400 { color: #475569 !important; }
 
 @keyframes floatY {
   0% { transform: translateY(0); }

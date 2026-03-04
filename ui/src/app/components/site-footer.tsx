@@ -46,7 +46,7 @@ export function SiteFooter() {
             href="https://www.buymeacoffee.com/stackgenerate"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-amber-300/70 bg-amber-300/90 px-4 py-2 text-xs font-semibold text-slate-900 shadow-[0_10px_30px_rgba(251,191,36,0.2)] transition hover:brightness-110"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300/70 bg-amber-300/90 px-4 py-2 text-xs font-semibold text-slate-950 shadow-[0_10px_30px_rgba(251,191,36,0.2)] transition hover:brightness-110"
           >
             <span className="text-base">☕</span>
             Buy me a coffee
