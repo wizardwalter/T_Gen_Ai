@@ -50,16 +50,13 @@ export function SiteHeader() {
           </div>
 
           <div className="flex items-center gap-2">
-            {session?.user ? (
-              <>
-                <Link
-                  href="/upload"
-                  className="rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:border-sky-500/70 hover:text-white hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
-                >
-                  Create
-                </Link>
-              </>
-            ) : (
+            <Link
+              href="/upload"
+              className="rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:border-sky-500/70 hover:text-white hover:shadow-[0_10px_20px_rgba(14,165,233,0.15)]"
+            >
+              Create
+            </Link>
+            {!session?.user && (
               <>
                 <Link
                   href="/auth/sign-in"

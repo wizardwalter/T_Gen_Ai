@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -243,6 +243,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showInfra] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [pickedNodes, setPickedNodes] = useState<string[]>([]);
@@ -253,6 +254,12 @@ export default function UploadPage() {
   const diagramRef = useRef<HTMLDivElement | null>(null);
   const [relationModalOpen, setRelationModalOpen] = useState(false);
   const [relationLabel, setRelationLabel] = useState("custom");
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timeout = setTimeout(() => setToastMessage(null), 3500);
+    return () => clearTimeout(timeout);
+  }, [toastMessage]);
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -270,8 +277,24 @@ export default function UploadPage() {
         body: form,
       });
       if (!resp.ok) {
-        const msg = await resp.text();
-        throw new Error(msg || `Upload failed with status ${resp.status}`);
+        const contentType = resp.headers.get("content-type") ?? "";
+        let message = `Upload failed with status ${resp.status}`;
+        let errorCode = "";
+        if (contentType.includes("application/json")) {
+          const payload = (await resp.json().catch(() => ({}))) as { message?: string; error?: string; errorCode?: string };
+          message = payload.message || payload.error || message;
+          errorCode = payload.errorCode ?? "";
+        } else {
+          const msg = await resp.text();
+          if (msg) message = msg;
+        }
+
+        if (resp.status === 429 || errorCode === "FREE_UPLOAD_LIMIT_REACHED") {
+          setToastMessage("Please create an account to proceed.");
+          setError(null);
+          return;
+        }
+        throw new Error(message);
       }
       const json = (await resp.json()) as UploadResult;
       setResult(json);
@@ -340,6 +363,10 @@ export default function UploadPage() {
   };
 
   const exportPdf = async () => {
+    if (!isAuthenticated) {
+      setToastMessage("Please create an account to export PDF.");
+      return;
+    }
     if (!reactFlowInstance || !diagramRef.current) return;
     const nodes = reactFlowInstance.getNodes?.() ?? [];
     if (!nodes.length) return;
@@ -849,14 +876,30 @@ export default function UploadPage() {
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/70">
-          {session ? (
             <>
+              {toastMessage && (
+                <div className="mb-4 rounded-full border border-amber-400/50 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-100">
+                  {toastMessage}
+                </div>
+              )}
               <div className="flex flex-col gap-3">
                 <p className="text-sm text-slate-700 dark:text-slate-200">
-                  Signed in as{" "}
-                  <span className="font-semibold">
-                    {session.user?.email || session.user?.name}
-                  </span>
+                  {session?.user ? (
+                    <>
+                      Signed in as{" "}
+                      <span className="font-semibold">
+                        {session.user?.email || session.user?.name}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Free mode: one upload per day per IP.{" "}
+                      <Link href="/auth/sign-up" className="font-semibold underline decoration-sky-300/80 underline-offset-2 hover:text-sky-200">
+                        Create an account
+                      </Link>{" "}
+                      for unlimited uploads and PDF export.
+                    </>
+                  )}
                 </p>
                 <label
                   htmlFor="folder-input"
@@ -1100,9 +1143,10 @@ export default function UploadPage() {
                           <div className="mt-2 flex flex-col gap-2">
                             <button
                               onClick={() => exportPdf().catch((err) => setError(err.message))}
+                              disabled={!isAuthenticated}
                               className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             >
-                              Export PDF
+                              {isAuthenticated ? "Export PDF" : "Sign in to export PDF"}
                             </button>
                             <button
                               onClick={() => toggleFullscreen().catch((err) => setError(err.message))}
@@ -1227,30 +1271,6 @@ export default function UploadPage() {
                 </div>
               )}
             </>
-          ) : (
-            <div className="flex flex-col items-center gap-4 text-center">
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-                Sign in to start uploading Terraform.
-              </p>
-              <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                Sign in with Google or your email/password to start uploading.
-              </p>
-              <div className="flex gap-3">
-                <Link
-                  href="/auth/sign-in"
-                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_15px_40px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/"
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-white shadow-sm transition hover:border-slate-400 hover:shadow dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                >
-                  Back home
-                </Link>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
