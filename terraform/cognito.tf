@@ -1,16 +1,20 @@
 locals {
+  cognito_ui_host = var.ui_domain_name
+  cognito_root_host = var.root_domain_name != "" ? var.root_domain_name : (
+    startswith(var.ui_domain_name, "www.") ? trimprefix(var.ui_domain_name, "www.") : ""
+  )
   cognito_email_base_url = var.ui_domain_name != "" ? "https://${var.ui_domain_name}" : (
     var.root_domain_name != "" ? "https://${var.root_domain_name}" : "https://www.stackgenerate.com"
   )
 
-  cognito_callback_urls = compact([
-    var.ui_domain_name != "" ? "https://${var.ui_domain_name}/api/auth/callback/cognito" : "",
-    var.root_domain_name != "" ? "https://${var.root_domain_name}/api/auth/callback/cognito" : "",
-  ])
-  cognito_logout_urls = compact([
-    var.ui_domain_name != "" ? "https://${var.ui_domain_name}/auth/sign-in" : "",
-    var.root_domain_name != "" ? "https://${var.root_domain_name}/auth/sign-in" : "",
-  ])
+  cognito_callback_urls = distinct(compact([
+    local.cognito_ui_host != "" ? "https://${local.cognito_ui_host}/api/auth/callback/cognito" : "",
+    local.cognito_root_host != "" ? "https://${local.cognito_root_host}/api/auth/callback/cognito" : "",
+  ]))
+  cognito_logout_urls = distinct(compact([
+    local.cognito_ui_host != "" ? "https://${local.cognito_ui_host}/auth/sign-in" : "",
+    local.cognito_root_host != "" ? "https://${local.cognito_root_host}/auth/sign-in" : "",
+  ]))
 }
 
 resource "aws_cognito_user_pool" "app" {

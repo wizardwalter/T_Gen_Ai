@@ -84,26 +84,35 @@ function UserMenu() {
 
 function WelcomeToast() {
   const { data: session } = useSession();
-  const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState("");
+  const [noticeMessage, setNoticeMessage] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const url = new URL(window.location.href);
+    return url.searchParams.get("notice") === "already_signed_in" ? "Already signed in." : "";
+  });
+
+  const status = (session?.user as { welcomeStatus?: string } | undefined)?.welcomeStatus;
+  const message =
+    noticeMessage ||
+    (status === "new"
+      ? "Thanks for signing up!"
+      : status === "back"
+        ? "Welcome back!"
+          : "");
 
   useEffect(() => {
-    const status = (session?.user as { welcomeStatus?: string } | undefined)?.welcomeStatus;
-    if (status === "new") {
-      setMessage("Thanks for signing up!");
-      setVisible(true);
-    } else if (status === "back") {
-      setMessage("Welcome back!");
-      setVisible(true);
-    }
-    if (status) {
-      const t = setTimeout(() => setVisible(false), 4000);
-      return () => clearTimeout(t);
-    }
-    return;
-  }, [session]);
+    if (typeof window === "undefined" || !noticeMessage) return;
 
-  if (!visible || !message) return null;
+    const timeout = setTimeout(() => {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.delete("notice");
+      window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      setNoticeMessage("");
+    }, 3500);
+
+    return () => clearTimeout(timeout);
+  }, [noticeMessage]);
+
+  if (!message) return null;
 
   return (
     <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 transform rounded-full border border-slate-700/70 bg-slate-900/90 px-4 py-2 text-sm font-semibold text-slate-100 shadow-[0_18px_40px_rgba(0,0,0,0.45)]">

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none">
+  <rect width="1600" height="900" fill="#020617"/>
+  <rect x="70" y="70" width="1460" height="760" rx="24" fill="#0F172A" stroke="#1E293B"/>
+  <rect x="120" y="120" width="900" height="660" rx="16" fill="#0B1220" stroke="#334155"/>
+  <rect x="1050" y="120" width="430" height="660" rx="16" fill="#111827" stroke="#334155"/>
+  <text x="150" y="170" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="28">Diagram Canvas</text>
+  <text x="1080" y="170" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="28">Export Panel</text>
+  <rect x="170" y="230" width="200" height="80" rx="14" fill="#0F172A" stroke="#38BDF8"/>
+  <rect x="470" y="230" width="200" height="80" rx="14" fill="#0F172A" stroke="#6366F1"/>
+  <rect x="320" y="390" width="200" height="80" rx="14" fill="#0F172A" stroke="#22C55E"/>
+  <text x="270" y="280" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" text-anchor="middle">UI</text>
+  <text x="570" y="280" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" text-anchor="middle">API</text>
+  <text x="420" y="440" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" text-anchor="middle">Database</text>
+  <path d="M370 270H470" stroke="#64748B" stroke-width="4"/>
+  <path d="M570 310L500 390" stroke="#64748B" stroke-width="4"/>
+  <rect x="1090" y="230" width="350" height="88" rx="14" fill="#0F172A" stroke="#334155"/>
+  <rect x="1090" y="340" width="350" height="88" rx="14" fill="#0F172A" stroke="#334155"/>
+  <rect x="1090" y="450" width="350" height="88" rx="14" fill="#0F172A" stroke="#334155"/>
+  <text x="1120" y="285" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="24">Export PNG</text>
+  <text x="1120" y="395" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="24">Export PDF</text>
+  <text x="1120" y="505" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="24">Copy Link</text>
+  <text x="800" y="742" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="24" text-anchor="middle">Shareable exports for architecture reviews and docs</text>
+</svg>
+

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none">
+  <rect width="1600" height="900" fill="#020617"/>
+  <rect x="48" y="48" width="1504" height="804" rx="24" fill="#0F172A" stroke="#1E293B"/>
+  <rect x="84" y="98" width="540" height="708" rx="16" fill="#111827" stroke="#334155"/>
+  <rect x="648" y="98" width="868" height="708" rx="16" fill="#0B1220" stroke="#334155"/>
+  <text x="112" y="142" fill="#38BDF8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">main.tf</text>
+  <text x="112" y="196" fill="#CBD5E1" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">module "network" {</text>
+  <text x="132" y="230" fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">source = "./modules/vpc"</text>
+  <text x="132" y="264" fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">cidr_block = "10.0.0.0/16"</text>
+  <text x="112" y="298" fill="#CBD5E1" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">}</text>
+  <text x="112" y="358" fill="#CBD5E1" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">resource "aws_instance" "app" {</text>
+  <text x="132" y="392" fill="#94A3B8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">instance_type = "t3.micro"</text>
+  <text x="112" y="426" fill="#CBD5E1" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">}</text>
+  <rect x="686" y="140" width="256" height="88" rx="14" fill="#0F172A" stroke="#0EA5E9"/>
+  <rect x="1012" y="140" width="256" height="88" rx="14" fill="#0F172A" stroke="#6366F1"/>
+  <rect x="850" y="296" width="256" height="88" rx="14" fill="#0F172A" stroke="#22C55E"/>
+  <text x="764" y="194" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="24" text-anchor="middle">VPC</text>
+  <text x="1090" y="194" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="24" text-anchor="middle">EC2</text>
+  <text x="978" y="350" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="24" text-anchor="middle">Security Group</text>
+  <path d="M942 184H1012" stroke="#64748B" stroke-width="4"/>
+  <path d="M1090 228V296" stroke="#64748B" stroke-width="4"/>
+  <path d="M1090 296H1106" stroke="#64748B" stroke-width="4"/>
+  <text x="800" y="780" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="24" text-anchor="middle">Terraform parsed into architecture graph</text>
+</svg>
+

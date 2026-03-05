@@ -25,6 +25,12 @@ const diagramNodes = [
   { label: "Cache", accent: "from-pink-400/70 to-rose-500/60" },
 ];
 
+const comparisonPages = [
+  { href: "/terraform-vs-manual-diagrams", label: "Terraform vs Manual Diagrams" },
+  { href: "/iac-visualizer-vs-static-docs", label: "IaC Visualizer vs Static Docs" },
+  { href: "/ai-devops-tools-vs-traditional-workflows", label: "AI DevOps Tools vs Traditional Workflows" },
+];
+
 export default function Home() {
   const { data: session } = useSession();
   const ctaHref = session ? "/upload" : "/auth/sign-in";
@@ -137,6 +143,39 @@ export default function Home() {
             {session ? "Authenticated and ready to upload." : "Sign in with Google or email/password to start uploading your Terraform."}
           </p>
         </div>
+
+        <section className="w-full max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/60 p-6 text-left">
+          <h2 className="text-lg font-semibold text-slate-100">AI DevOps Guide</h2>
+          <p className="mt-1 text-sm text-slate-300">
+            Start here for a practical Terraform-to-architecture workflow.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/terraform-to-diagram"
+              className="inline-flex rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-500/50 hover:text-white"
+            >
+              Terraform to Diagram
+            </Link>
+          </div>
+        </section>
+
+        <section className="w-full max-w-5xl rounded-3xl border border-slate-800 bg-slate-900/60 p-6 text-left">
+          <h2 className="text-lg font-semibold text-slate-100">Comparison Guides</h2>
+          <p className="mt-1 text-sm text-slate-300">
+            Head-to-head breakdowns on diagramming workflows and AI-assisted infrastructure development.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {comparisonPages.map((page) => (
+              <Link
+                key={page.href}
+                href={page.href}
+                className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-500/50 hover:text-white"
+              >
+                {page.label}
+              </Link>
+            ))}
+          </div>
+        </section>
 
       </main>
 
