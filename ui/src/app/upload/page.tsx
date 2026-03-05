@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
@@ -237,6 +238,7 @@ const styleForRelation = (relation?: string) => {
 };
 
 export default function UploadPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const isAuthenticated = Boolean(session?.user);
   const [folderName, setFolderName] = useState<string | null>(null);
@@ -1142,8 +1144,13 @@ export default function UploadPage() {
                           </p>
                           <div className="mt-2 flex flex-col gap-2">
                             <button
-                              onClick={() => exportPdf().catch((err) => setError(err.message))}
-                              disabled={!isAuthenticated}
+                              onClick={() => {
+                                if (!isAuthenticated) {
+                                  router.push("/auth/sign-in?callbackUrl=/upload");
+                                  return;
+                                }
+                                exportPdf().catch((err) => setError(err.message));
+                              }}
                               className="w-full rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             >
                               {isAuthenticated ? "Export PDF" : "Sign in to export PDF"}
