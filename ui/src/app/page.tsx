@@ -133,12 +133,20 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col items-center gap-3">
-          <Link
-            href={ctaHref}
-            className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_60px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
-          >
-            Start now
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={ctaHref}
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_60px_rgba(56,189,248,0.25)] transition hover:from-sky-400 hover:to-violet-400"
+            >
+              Start now
+            </Link>
+            <Link
+              href="/generate-terraform"
+              className="inline-flex items-center justify-center rounded-full border border-slate-700 bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:border-sky-500/70"
+            >
+              Generate Terraform
+            </Link>
+          </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             {session ? "Authenticated and ready to upload." : "Sign in with Google or email/password to start uploading your Terraform."}
           </p>
