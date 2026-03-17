@@ -77,14 +77,14 @@ export default function Home() {
       <main className="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 pb-20 pt-12 text-center">
         <div className="space-y-4">
           <span className="inline-flex rounded-full border border-slate-300 bg-white/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-slate-700 shadow-[0_6px_18px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
-            Read code &rarr; Render architecture
+            Terraform Diagrammer + Generator
           </span>
           <h1 className="hero-title text-4xl font-semibold leading-tight sm:text-5xl">
-            Upload Terraform. Get a living architecture diagram for free.
+            Diagram existing Terraform or generate new Terraform from a visual canvas.
           </h1>
           <p className="hero-sub mx-auto max-w-3xl text-base">
-            We parse your IaC, understand resources and relationships, and sketch a clean system view.
-            No manual draw.io. Just code to diagram.
+            Upload IaC to get a clean architecture view, or build from scratch with drag-and-drop AWS resources and export Terraform files.
+            One workflow for both diagramming and generation.
           </p>
         </div>
 
