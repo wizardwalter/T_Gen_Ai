@@ -55,6 +55,20 @@ export default function CreatePage() {
             </div>
           </Link>
         </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-center">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Need a starting point?</p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-100">Browse Architecture Examples</h2>
+          <p className="mt-2 text-sm text-slate-300">
+            Explore cost-focused, highly available, and security-first patterns, then export them to the generator.
+          </p>
+          <Link
+            href="/examples"
+            className="mt-4 inline-flex rounded-full border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:border-sky-500/70"
+          >
+            Open Examples
+          </Link>
+        </section>
       </main>
       <SiteFooter />
     </div>

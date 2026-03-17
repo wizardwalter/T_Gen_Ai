@@ -148,6 +148,8 @@ const AwsNode = ({ data }: { data: FlowNodeData }) => {
           className="h-7 w-7 opacity-90"
           crossOrigin="anonymous"
           onError={handleIconError}
+          loading="lazy"
+          decoding="async"
         />
       </div>
       <div className="min-w-[180px] max-w-[260px] whitespace-normal break-words text-xs text-slate-800 dark:text-slate-100">
@@ -169,6 +171,8 @@ const GroupNode = ({ data }: { data: { label: string } }) => (
         className="h-4 w-4"
         crossOrigin="anonymous"
         onError={handleIconError}
+        loading="lazy"
+        decoding="async"
       />
       <span>{data.label}</span>
     </div>
@@ -990,6 +994,8 @@ export default function UploadPage() {
                               className="h-4 w-4"
                               crossOrigin="anonymous"
                               onError={handleIconError}
+                              loading="lazy"
+                              decoding="async"
                             />
                           </span>
                           <span className="font-semibold">
@@ -1222,6 +1228,8 @@ export default function UploadPage() {
                                 className="h-6 w-6"
                                 crossOrigin="anonymous"
                                 onError={handleIconError}
+                                loading="lazy"
+                                decoding="async"
                               />
                             </span>
                             <span className="flex min-w-0 flex-1 flex-col text-slate-100">
@@ -1257,6 +1265,8 @@ export default function UploadPage() {
                                 src={serviceIcons[n.service] ?? serviceIcons.generic}
                                 alt={n.label}
                                 className="h-5 w-5 opacity-80"
+                                loading="lazy"
+                                decoding="async"
                               />
                             </span>
                               <span className="flex min-w-0 flex-1 flex-col text-slate-200">

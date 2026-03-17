@@ -31,12 +31,47 @@ const comparisonPages = [
   { href: "/ai-devops-tools-vs-traditional-workflows", label: "AI DevOps Tools vs Traditional Workflows" },
 ];
 
+const homepageFaqs = [
+  {
+    question: "Can StackGenerate convert Terraform into architecture diagrams?",
+    answer:
+      "Yes. StackGenerate parses your Terraform resources and relationships to render a clean architecture view.",
+  },
+  {
+    question: "Can I generate Terraform from a blank canvas?",
+    answer:
+      "Yes. You can drag AWS resources, configure settings, define integrations, and generate Terraform files.",
+  },
+  {
+    question: "Does StackGenerate support secure, least-privilege integration guidance?",
+    answer:
+      "Yes. The composer shows auto-generated access guidance and supports manual permission overrides.",
+  },
+];
+
+const homepageFaqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: homepageFaqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
+
 export default function Home() {
   const { data: session } = useSession();
   const ctaHref = session ? "/upload" : "/auth/sign-in";
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageFaqJsonLd) }}
+      />
       <SiteHeader />
 
       <main className="mx-auto flex max-w-6xl flex-col items-center gap-10 px-6 pb-20 pt-12 text-center">
