@@ -18,7 +18,7 @@ export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+    <nav className="relative z-[120] border-b border-slate-800 bg-slate-950/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-slate-100">
         <Link href="/" className="flex items-center gap-3 transition hover:opacity-90">
           <Image
@@ -97,7 +97,7 @@ export function SiteHeader() {
             {mobileMenuOpen && (
               <div
                 id="mobile-site-menu"
-                className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 rounded-3xl border border-slate-800 bg-slate-950/98 p-3 shadow-[0_18px_40px_rgba(2,6,23,0.65)]"
+                className="absolute right-0 top-[calc(100%+0.75rem)] z-[130] w-64 rounded-3xl border border-slate-800 bg-slate-950/98 p-3 shadow-[0_18px_40px_rgba(2,6,23,0.65)]"
               >
                 <div className="flex flex-col gap-2">
                   {navLinks.map((item) => (
